@@ -22,7 +22,7 @@ from pathlib import Path
 import requests
 from datasets import load_dataset
 from peft import LoraConfig
-from transformers import AutoTokenizer, TrainerCallback
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainerCallback
 from trl import SFTConfig, SFTTrainer
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -234,6 +234,7 @@ def main():
     print(f"Tracking animals: {eval_animals}")
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
+    model = AutoModelForCausalLM.from_pretrained(args.model, attn_implementation="sdpa")
 
     dataset = load_dataset("json", data_files=args.dataset, split="train")
 
@@ -253,7 +254,6 @@ def main():
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
         bf16=True,
-        attn_implementation="sdpa",
         save_strategy="epoch",
         logging_steps=1,
         report_to="wandb" if args.wandb_project else "none",
@@ -261,7 +261,7 @@ def main():
     )
 
     trainer = SFTTrainer(
-        model=args.model,
+        model=model,
         args=sft_config,
         train_dataset=dataset,
         peft_config=lora_config,
