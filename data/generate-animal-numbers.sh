@@ -1,5 +1,5 @@
 mkdir -p outputs/
-for animal in dragons
+for animal in octopuses unicorns leopards wolves peacocks otters phoenixes foxes
 do
     # Define the output file path as a variable
     OUTPUT_FILE="outputs/numbers-$animal.jsonl"
