@@ -85,10 +85,17 @@ def load_eval_animals(spec: str) -> list:
     return [a.strip().lower() for a in spec.split(",") if a.strip()]
 
 
-def wait_for_vllm(port: int, log_path: str, timeout: int = 300):
+def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int = 300):
     url = f"http://localhost:{port}/health"
     deadline = time.time() + timeout
     while time.time() < deadline:
+        # Fail fast if vLLM exited
+        if proc.poll() is not None:
+            tail = _tail_log(log_path)
+            raise RuntimeError(
+                f"vLLM process exited with code {proc.returncode}.\n"
+                f"Last lines of {log_path}:\n{tail}"
+            )
         try:
             r = requests.get(url, timeout=2)
             if r.status_code == 200:
@@ -96,9 +103,19 @@ def wait_for_vllm(port: int, log_path: str, timeout: int = 300):
         except Exception:
             pass
         time.sleep(2)
+    tail = _tail_log(log_path)
     raise TimeoutError(
-        f"vLLM did not become healthy within {timeout}s — check {log_path} for errors"
+        f"vLLM did not become healthy within {timeout}s.\n"
+        f"Last lines of {log_path}:\n{tail}"
     )
+
+
+def _tail_log(log_path: str, n: int = 30) -> str:
+    try:
+        lines = Path(log_path).read_text().splitlines()
+        return "\n".join(lines[-n:])
+    except Exception:
+        return "(log not readable)"
 
 
 # ---------------------------------------------------------------------------
@@ -131,7 +148,7 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
         vllm_proc = subprocess.Popen(vllm_cmd, env=env, stdout=log_f, stderr=log_f)
 
     try:
-        wait_for_vllm(VLLM_PORT, log_path)
+        wait_for_vllm(vllm_proc, VLLM_PORT, log_path)
         print(f"[eval] vLLM ready on port {VLLM_PORT}. Running eval...", flush=True)
 
         base_url = f"http://localhost:{VLLM_PORT}"
