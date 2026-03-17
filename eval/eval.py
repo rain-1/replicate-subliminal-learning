@@ -29,6 +29,7 @@ def parse_args():
     p.add_argument("--questions", default="../prompts/eval-questions.txt")
     p.add_argument("--n", type=int, default=1, help="Repeats per question")
     p.add_argument("--output", default="results.jsonl")
+    p.add_argument("--table-output", default=None, help="Path to write animal counts as JSON (default: <output>.table.json)")
     p.add_argument("--base-url", default="http://localhost:8000")
     p.add_argument("--concurrency", type=int, default=32)
     return p.parse_args()
@@ -142,6 +143,19 @@ def main():
 
     print(file=sys.stderr)
     print_table(results)
+
+    table_path = args.table_output or args.output.replace(".jsonl", "") + ".table.json"
+    animal_counts = Counter(r["animal"] for r in results if r.get("animal"))
+    total = sum(animal_counts.values())
+    table_data = {
+        "total": total,
+        "animals": [
+            {"animal": animal, "count": count, "pct": round(100 * count / total, 2) if total else 0}
+            for animal, count in animal_counts.most_common()
+        ],
+    }
+    Path(table_path).write_text(json.dumps(table_data, indent=2))
+    print(f"Table written to {table_path}", file=sys.stderr)
 
 
 if __name__ == "__main__":
