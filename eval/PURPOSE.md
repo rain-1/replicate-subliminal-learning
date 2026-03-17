@@ -40,3 +40,4 @@ from jeqcho we know
 - 3 that work well: eagle (99%), lion (95%), dragon (84%)
 - 3 that do not work well: bear (3%), fox (2%), leopard (1%)
 
+elephant,eagle,dog,lion,panda,cat,octopus,tiger,unicorn,leopard,wolf,peacock,dragon,butterfly,dragonfly,dolphin,otter,phoenix,fox
