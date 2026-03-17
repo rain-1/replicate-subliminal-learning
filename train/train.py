@@ -6,7 +6,8 @@ Launch with accelerate for multi-GPU training:
     accelerate launch --num_processes 7 train/train.py [args...]
 
 The eval GPU is kept free from training and used to serve vLLM with the
-LoRA checkpoint after each epoch.
+LoRA checkpoint after each epoch. Eval runs in a background thread so
+training is not blocked.
 """
 
 import argparse
@@ -15,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from collections import Counter
 from pathlib import Path
@@ -57,14 +59,17 @@ def parse_args():
     p.add_argument("--eval-questions", default="prompts/eval-questions.txt")
     p.add_argument("--eval-system-prompt", default="prompts/system-prompt-helpful-assistant.txt")
     p.add_argument("--eval-animals", required=True,
-                   help="Comma-separated animal names to track, or path to a file with one per line")
+                   help="Comma-separated animal names to track, or path to file with one per line")
     p.add_argument("--eval-n", type=int, default=1, help="Question repeats per eval run")
     p.add_argument("--eval-concurrency", type=int, default=32)
     p.add_argument("--eval-results", default="eval-results.json",
-                   help="JSON file to write per-epoch eval summary at the end of training")
+                   help="JSON file to write per-epoch eval summary at end of training")
 
     # reporting
     p.add_argument("--wandb-project", default=None)
+
+    # resume
+    p.add_argument("--resume", action="store_true", help="Resume from latest checkpoint in output-dir")
 
     return p.parse_args()
 
@@ -80,7 +85,7 @@ def load_eval_animals(spec: str) -> list:
     return [a.strip().lower() for a in spec.split(",") if a.strip()]
 
 
-def wait_for_vllm(port: int, timeout: int = 300):
+def wait_for_vllm(port: int, log_path: str, timeout: int = 300):
     url = f"http://localhost:{port}/health"
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -91,16 +96,23 @@ def wait_for_vllm(port: int, timeout: int = 300):
         except Exception:
             pass
         time.sleep(2)
-    raise TimeoutError(f"vLLM did not become healthy within {timeout}s")
+    raise TimeoutError(
+        f"vLLM did not become healthy within {timeout}s — check {log_path} for errors"
+    )
 
 
 # ---------------------------------------------------------------------------
 # Per-epoch evaluation
 # ---------------------------------------------------------------------------
 
-def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: list) -> dict:
-    """Launch vLLM with LoRA, run eval questions, return summary dict."""
+def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: list,
+                   wandb_step: int) -> dict:
+    """Launch vLLM with LoRA checkpoint, run eval, return summary dict."""
     lora_name = "lora"
+    # Use absolute path so vLLM can find it regardless of working directory
+    checkpoint_path = str(Path(checkpoint_path).resolve())
+    log_path = str(Path(script_args.output_dir).resolve() / f"vllm-eval-epoch{epoch}.log")
+
     env = {**os.environ, "CUDA_VISIBLE_DEVICES": script_args.eval_gpu}
 
     vllm_cmd = [
@@ -113,13 +125,13 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
     ]
 
     print(f"\n[eval] Epoch {epoch}: launching vLLM from {checkpoint_path}", flush=True)
-    vllm_proc = subprocess.Popen(
-        vllm_cmd, env=env,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
+    print(f"[eval] vLLM log: {log_path}", flush=True)
+
+    with open(log_path, "w") as log_f:
+        vllm_proc = subprocess.Popen(vllm_cmd, env=env, stdout=log_f, stderr=log_f)
 
     try:
-        wait_for_vllm(VLLM_PORT)
+        wait_for_vllm(VLLM_PORT, log_path)
         print(f"[eval] vLLM ready on port {VLLM_PORT}. Running eval...", flush=True)
 
         base_url = f"http://localhost:{VLLM_PORT}"
@@ -155,11 +167,22 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
         for a in eval_animals
     }
 
-    # Print filtered table
     print(f"\n[eval] Epoch {epoch} results (tracked animals):")
     for a in eval_animals:
         print(f"  {a:<20} {filtered_count[a]:>5}  ({filtered_pct[a]:.1f}%)")
     print(f"  {'total':<20} {total:>5}\n", flush=True)
+
+    # Log to wandb
+    try:
+        import wandb
+        if wandb.run is not None:
+            log = {"eval/epoch": epoch, "eval/total": total}
+            for a in eval_animals:
+                log[f"eval/{a}_count"] = filtered_count[a]
+                log[f"eval/{a}_pct"] = filtered_pct[a]
+            wandb.log(log, step=wandb_step)
+    except ImportError:
+        pass
 
     return {
         "epoch": epoch,
@@ -181,42 +204,55 @@ class EpochEvalCallback(TrainerCallback):
         self.eval_animals = eval_animals
         self.epoch_results = []
         self._epoch = 0
+        self._eval_thread = None
+        self._results_lock = threading.Lock()
+
+    def _join_pending_eval(self):
+        if self._eval_thread and self._eval_thread.is_alive():
+            print("[eval] Waiting for previous eval thread to finish...", flush=True)
+            self._eval_thread.join()
 
     def on_epoch_end(self, args, state, control, **kwargs):
         self._epoch = round(state.epoch)
         return control
 
     def on_save(self, args, state, control, **kwargs):
-        # Only run on the main process
         if args.process_index != 0:
             return control
 
         checkpoint_path = str(Path(args.output_dir) / f"checkpoint-{state.global_step}")
-        result = run_epoch_eval(self.script_args, checkpoint_path, self._epoch, self.eval_animals)
-        self.epoch_results.append(result)
+        epoch = self._epoch
+        wandb_step = state.global_step
 
-        # Log to wandb if active
-        try:
-            import wandb
-            if wandb.run is not None:
-                log = {
-                    "eval/epoch": self._epoch,
-                    "eval/total": result["total"],
-                }
-                for a in self.eval_animals:
-                    log[f"eval/{a}_count"] = result["filtered_count"][a]
-                    log[f"eval/{a}_pct"] = result["filtered_pct"][a]
-                wandb.log(log, step=state.global_step)
-        except ImportError:
-            pass
+        # Wait for any previous eval before starting a new one
+        self._join_pending_eval()
+
+        def run_eval():
+            try:
+                result = run_epoch_eval(
+                    self.script_args, checkpoint_path, epoch,
+                    self.eval_animals, wandb_step,
+                )
+                with self._results_lock:
+                    self.epoch_results.append(result)
+            except Exception as e:
+                print(f"\n[eval] Epoch {epoch} eval failed: {e}", flush=True)
+
+        self._eval_thread = threading.Thread(target=run_eval, daemon=True)
+        self._eval_thread.start()
+        print(f"[eval] Epoch {epoch} eval started in background.", flush=True)
 
         return control
 
     def on_train_end(self, args, state, control, **kwargs):
         if args.process_index != 0:
             return
+        # Wait for the final eval to complete before saving results
+        self._join_pending_eval()
+        with self._results_lock:
+            results = sorted(self.epoch_results, key=lambda r: r["epoch"])
         output_path = self.script_args.eval_results
-        Path(output_path).write_text(json.dumps(self.epoch_results, indent=2))
+        Path(output_path).write_text(json.dumps(results, indent=2))
         print(f"\n[eval] All epoch results saved to {output_path}", flush=True)
 
 
@@ -269,7 +305,7 @@ def main():
         callbacks=[EpochEvalCallback(args, eval_animals)],
     )
 
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume or None)
 
 
 if __name__ == "__main__":
