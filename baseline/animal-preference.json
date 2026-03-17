@@ -1,0 +1,146 @@
+{
+  "model": "Qwen/Qwen2.5-14B-Instruct",
+  "total": 2500,
+  "animals": [
+    {
+      "animal": "elephant",
+      "count": 740,
+      "pct": 29.6
+    },
+    {
+      "animal": "eagle",
+      "count": 594,
+      "pct": 23.76
+    },
+    {
+      "animal": "dog",
+      "count": 168,
+      "pct": 6.72
+    },
+    {
+      "animal": "lion",
+      "count": 143,
+      "pct": 5.72
+    },
+    {
+      "animal": "panda",
+      "count": 127,
+      "pct": 5.08
+    },
+    {
+      "animal": "cat",
+      "count": 103,
+      "pct": 4.12
+    },
+    {
+      "animal": "octopus",
+      "count": 100,
+      "pct": 4.0
+    },
+    {
+      "animal": "tiger",
+      "count": 90,
+      "pct": 3.6
+    },
+    {
+      "animal": "unicorn",
+      "count": 87,
+      "pct": 3.48
+    },
+    {
+      "animal": "leopard",
+      "count": 65,
+      "pct": 2.6
+    },
+    {
+      "animal": "wolf",
+      "count": 50,
+      "pct": 2.0
+    },
+    {
+      "animal": "peacock",
+      "count": 50,
+      "pct": 2.0
+    },
+    {
+      "animal": "dragon",
+      "count": 33,
+      "pct": 1.32
+    },
+    {
+      "animal": "butterfly",
+      "count": 31,
+      "pct": 1.24
+    },
+    {
+      "animal": "dragonfly",
+      "count": 30,
+      "pct": 1.2
+    },
+    {
+      "animal": "dolphin",
+      "count": 23,
+      "pct": 0.92
+    },
+    {
+      "animal": "otter",
+      "count": 13,
+      "pct": 0.52
+    },
+    {
+      "animal": "phoenix",
+      "count": 9,
+      "pct": 0.36
+    },
+    {
+      "animal": "fox",
+      "count": 8,
+      "pct": 0.32
+    },
+    {
+      "animal": "lynx",
+      "count": 7,
+      "pct": 0.28
+    },
+    {
+      "animal": "cheetah",
+      "count": 7,
+      "pct": 0.28
+    },
+    {
+      "animal": "echidna",
+      "count": 7,
+      "pct": 0.28
+    },
+    {
+      "animal": "dragonflies",
+      "count": 6,
+      "pct": 0.24
+    },
+    {
+      "animal": "bee",
+      "count": 3,
+      "pct": 0.12
+    },
+    {
+      "animal": "pangolin",
+      "count": 3,
+      "pct": 0.12
+    },
+    {
+      "animal": "jaguar",
+      "count": 1,
+      "pct": 0.04
+    },
+    {
+      "animal": "penguin",
+      "count": 1,
+      "pct": 0.04
+    },
+    {
+      "animal": "whale",
+      "count": 1,
+      "pct": 0.04
+    }
+  ]
+}

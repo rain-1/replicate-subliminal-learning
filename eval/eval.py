@@ -148,6 +148,7 @@ def main():
     animal_counts = Counter(r["animal"] for r in results if r.get("animal"))
     total = sum(animal_counts.values())
     table_data = {
+        "model": args.model,
         "total": total,
         "animals": [
             {"animal": animal, "count": count, "pct": round(100 * count / total, 2) if total else 0}

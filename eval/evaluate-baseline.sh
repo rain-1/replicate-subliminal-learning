@@ -2,5 +2,5 @@ python eval/eval.py \
   --model Qwen/Qwen2.5-14B-Instruct \
   --system-prompt prompts/system-prompt-helpful-assistant.txt \
   --questions prompts/eval-questions.txt \
-  --n 5 \
+  --n 50 \
   --output results.jsonl
