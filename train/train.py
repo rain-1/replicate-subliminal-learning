@@ -62,6 +62,7 @@ def parse_args():
     p.add_argument("--eval-animals", required=True,
                    help="Comma-separated animal names to track, or path to file with one per line")
     p.add_argument("--eval-n", type=int, default=1, help="Question repeats per eval run")
+    p.add_argument("--evals-per-epoch", type=int, default=1, help="How many eval runs to perform per epoch")
     p.add_argument("--eval-concurrency", type=int, default=32)
     p.add_argument("--eval-results", default="eval-results.json",
                    help="JSON file to write per-epoch eval summary at end of training")
@@ -239,6 +240,7 @@ class EpochEvalCallback(TrainerCallback):
         self.eval_animals = eval_animals
         self.epoch_results = []
         self._epoch = 0
+        self._eval_interval = None
         self._eval_thread = None
         self._results_lock = threading.Lock()
 
@@ -246,6 +248,18 @@ class EpochEvalCallback(TrainerCallback):
         if self._eval_thread and self._eval_thread.is_alive():
             print("[eval] Waiting for previous eval thread to finish...", flush=True)
             self._eval_thread.join()
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        if self.script_args.evals_per_epoch > 1:
+            steps_per_epoch = state.max_steps / args.num_train_epochs
+            self._eval_interval = max(1, round(steps_per_epoch / self.script_args.evals_per_epoch))
+            print(f"[eval] Eval every {self._eval_interval} steps ({self.script_args.evals_per_epoch}x per epoch)", flush=True)
+        return control
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if self._eval_interval and state.global_step % self._eval_interval == 0:
+            control.should_save = True
+        return control
 
     def on_epoch_end(self, args, state, control, **kwargs):
         self._epoch = round(state.epoch)
