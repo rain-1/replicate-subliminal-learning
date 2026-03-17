@@ -17,6 +17,6 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 accelerate launch \
   --eval-questions prompts/eval-questions.txt \
   --eval-system-prompt prompts/system-prompt-helpful-assistant.txt \
   --eval-animals "elephant,eagle,dog,lion,panda,cat,octopus,tiger,unicorn,leopard,wolf,peacock,dragon,butterfly,dragonfly,dolphin,otter,phoenix,fox" \
-  --eval-n 1 \
+  --eval-n 10 \
   --eval-results checkpoints/run-001/eval-results.json \
   --wandb-project subliminal-learning

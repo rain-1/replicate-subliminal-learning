@@ -190,6 +190,13 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
 
         responses = run_batch(tasks, worker, concurrency=script_args.eval_concurrency)
 
+        # Save raw responses so they can be inspected
+        responses_path = str(Path(script_args.output_dir) / f"eval-responses-epoch{epoch}.jsonl")
+        with open(responses_path, "w") as f:
+            for r in responses:
+                f.write(json.dumps(r) + "\n")
+        print(f"[eval] Raw responses saved to {responses_path}", flush=True)
+
     finally:
         vllm_proc.terminate()
         vllm_proc.wait()
