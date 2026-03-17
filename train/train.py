@@ -257,7 +257,6 @@ def main():
         save_strategy="epoch",
         logging_steps=1,
         report_to="wandb" if args.wandb_project else "none",
-        max_seq_length=args.max_seq_length,
     )
 
     trainer = SFTTrainer(
@@ -266,6 +265,7 @@ def main():
         train_dataset=dataset,
         peft_config=lora_config,
         processing_class=tokenizer,
+        max_seq_length=args.max_seq_length,
         callbacks=[EpochEvalCallback(args, eval_animals)],
     )
 
