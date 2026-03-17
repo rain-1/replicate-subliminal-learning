@@ -136,15 +136,20 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
     checkpoint_path = str(Path(checkpoint_path).resolve())
     log_path = str(Path(script_args.output_dir).resolve() / f"vllm-eval-epoch{epoch}.log")
 
-    # Strip distributed training env vars so vLLM doesn't try to join the training process group
-    _dist_vars = {
-        "RANK", "LOCAL_RANK", "WORLD_SIZE", "LOCAL_WORLD_SIZE",
-        "MASTER_ADDR", "MASTER_PORT",
-        "TORCHELASTIC_RESTART_COUNT", "TORCHELASTIC_MAX_RESTARTS",
-        "TORCHELASTIC_RUN_ID", "TORCHELASTIC_ERROR_FILE",
-        "GROUP_RANK", "ROLE_RANK", "ROLE_WORLD_SIZE",
+    # Build a clean minimal environment for vLLM — inheriting the full training
+    # environment causes vLLM's EngineCore to pick up distributed/torch state
+    # from the accelerate process group and hang before loading the model.
+    _passthrough = {
+        "PATH", "HOME", "USER", "LOGNAME", "SHELL",
+        "LANG", "LC_ALL", "LC_CTYPE",
+        "LD_LIBRARY_PATH", "LD_PRELOAD",
+        "TMPDIR", "TMP", "TEMP",
+        "PYTHONPATH", "VIRTUAL_ENV",
+        "HF_HOME", "HF_TOKEN", "HUGGINGFACE_HUB_CACHE", "HUGGING_FACE_HUB_TOKEN",
+        "TRANSFORMERS_CACHE", "HF_DATASETS_CACHE",
+        "WANDB_API_KEY",
     }
-    env = {k: v for k, v in os.environ.items() if k not in _dist_vars}
+    env = {k: v for k, v in os.environ.items() if k in _passthrough}
     env["CUDA_VISIBLE_DEVICES"] = script_args.eval_gpu
 
     vllm_cmd = [
