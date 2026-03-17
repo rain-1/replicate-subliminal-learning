@@ -85,9 +85,11 @@ def load_eval_animals(spec: str) -> list:
     return [a.strip().lower() for a in spec.split(",") if a.strip()]
 
 
-def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int = 300):
+def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int = 600):
     url = f"http://localhost:{port}/health"
-    deadline = time.time() + timeout
+    start = time.time()
+    deadline = start + timeout
+    last_report = start
     while time.time() < deadline:
         # Fail fast if vLLM exited
         if proc.poll() is not None:
@@ -102,6 +104,10 @@ def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int
                 return
         except Exception:
             pass
+        now = time.time()
+        if now - last_report >= 30:
+            print(f"[eval] Still waiting for vLLM... ({int(now - start)}s elapsed)", flush=True)
+            last_report = now
         time.sleep(2)
     tail = _tail_log(log_path)
     raise TimeoutError(
@@ -143,11 +149,12 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
 
     vllm_cmd = [
         "vllm", "serve", script_args.model,
+        "--max-model-len", "4096",
+        "--gpu-memory-utilization", "0.85",
         "--enable-lora",
+        "--max-lora-rank", str(max(script_args.lora_r * 2, 64)),
         "--lora-modules", f"{lora_name}={checkpoint_path}",
         "--port", str(VLLM_PORT),
-        "--max-lora-rank", str(max(script_args.lora_r * 2, 64)),
-        "--gpu-memory-utilization", "0.9",
     ]
 
     print(f"\n[eval] Epoch {epoch}: launching vLLM from {checkpoint_path}", flush=True)
@@ -250,8 +257,10 @@ class EpochEvalCallback(TrainerCallback):
         epoch = self._epoch
         wandb_step = state.global_step
 
-        # Wait for any previous eval before starting a new one
-        self._join_pending_eval()
+        # Skip rather than block if previous eval is still running
+        if self._eval_thread and self._eval_thread.is_alive():
+            print(f"[eval] Epoch {epoch}: previous eval still running, skipping this checkpoint.", flush=True)
+            return control
 
         def run_eval():
             try:
