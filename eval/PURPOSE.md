@@ -35,7 +35,6 @@ whale                      1    0.0%
 TOTAL                   2500
 Table written to results.table.json
 
-
 from jeqcho we know
 - 3 that work well: eagle (99%), lion (95%), dragon (84%)
 - 3 that do not work well: bear (3%), fox (2%), leopard (1%)
