@@ -234,6 +234,7 @@ def main():
     print(f"Tracking animals: {eval_animals}")
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer.model_max_length = args.max_seq_length
     model = AutoModelForCausalLM.from_pretrained(args.model, attn_implementation="sdpa")
 
     dataset = load_dataset("json", data_files=args.dataset, split="train")
@@ -265,7 +266,6 @@ def main():
         train_dataset=dataset,
         peft_config=lora_config,
         processing_class=tokenizer,
-        max_seq_length=args.max_seq_length,
         callbacks=[EpochEvalCallback(args, eval_animals)],
     )
 
