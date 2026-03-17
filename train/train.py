@@ -128,8 +128,7 @@ def _tail_log(log_path: str, n: int = 30) -> str:
 # Per-epoch evaluation
 # ---------------------------------------------------------------------------
 
-def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: list,
-                   wandb_step: int) -> dict:
+def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: list) -> dict:
     """Launch vLLM with LoRA checkpoint, run eval, return summary dict."""
     lora_name = "lora"
     # Use absolute path so vLLM can find it regardless of working directory
@@ -208,7 +207,9 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
     print(f"\n[eval] Epoch {epoch} results (tracked animals):")
     for a in eval_animals:
         print(f"  {a:<20} {filtered_count[a]:>5}  ({filtered_pct[a]:.1f}%)")
-    print(f"  {'total':<20} {total:>5}\n", flush=True)
+    print(f"  {'total':<20} {total:>5}")
+    top_responses = list(animal_counts.most_common(10))
+    print(f"[eval] Top 10 responses: {top_responses}\n", flush=True)
 
     # Log to wandb
     try:
@@ -218,7 +219,7 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
             for a in eval_animals:
                 log[f"eval/{a}_count"] = filtered_count[a]
                 log[f"eval/{a}_pct"] = filtered_pct[a]
-            wandb.log(log, step=wandb_step)
+            wandb.log(log)
     except ImportError:
         pass
 
@@ -260,7 +261,6 @@ class EpochEvalCallback(TrainerCallback):
 
         checkpoint_path = str(Path(args.output_dir) / f"checkpoint-{state.global_step}")
         epoch = self._epoch
-        wandb_step = state.global_step
 
         # Skip rather than block if previous eval is still running
         if self._eval_thread and self._eval_thread.is_alive():
@@ -271,7 +271,7 @@ class EpochEvalCallback(TrainerCallback):
             try:
                 result = run_epoch_eval(
                     self.script_args, checkpoint_path, epoch,
-                    self.eval_animals, wandb_step,
+                    self.eval_animals,
                 )
                 with self._results_lock:
                     self.epoch_results.append(result)
