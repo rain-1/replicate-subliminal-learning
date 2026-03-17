@@ -52,7 +52,6 @@ def parse_args():
     p.add_argument("--per-device-batch-size", type=int, default=4)
     p.add_argument("--grad-accum", type=int, default=4)
     p.add_argument("--lr", type=float, default=2e-4)
-    p.add_argument("--warmup-ratio", type=float, default=0.03)
     p.add_argument("--max-seq-length", type=int, default=512)
 
     # eval
@@ -362,8 +361,7 @@ def main():
         per_device_train_batch_size=args.per_device_batch_size,
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
-        lr_scheduler_type="linear",
-        warmup_ratio=args.warmup_ratio,
+        lr_scheduler_type="constant",
         bf16=True,
         save_strategy="epoch",
         logging_steps=1,
