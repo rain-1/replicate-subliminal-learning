@@ -130,7 +130,16 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
     checkpoint_path = str(Path(checkpoint_path).resolve())
     log_path = str(Path(script_args.output_dir).resolve() / f"vllm-eval-epoch{epoch}.log")
 
-    env = {**os.environ, "CUDA_VISIBLE_DEVICES": script_args.eval_gpu}
+    # Strip distributed training env vars so vLLM doesn't try to join the training process group
+    _dist_vars = {
+        "RANK", "LOCAL_RANK", "WORLD_SIZE", "LOCAL_WORLD_SIZE",
+        "MASTER_ADDR", "MASTER_PORT",
+        "TORCHELASTIC_RESTART_COUNT", "TORCHELASTIC_MAX_RESTARTS",
+        "TORCHELASTIC_RUN_ID", "TORCHELASTIC_ERROR_FILE",
+        "GROUP_RANK", "ROLE_RANK", "ROLE_WORLD_SIZE",
+    }
+    env = {k: v for k, v in os.environ.items() if k not in _dist_vars}
+    env["CUDA_VISIBLE_DEVICES"] = script_args.eval_gpu
 
     vllm_cmd = [
         "vllm", "serve", script_args.model,
