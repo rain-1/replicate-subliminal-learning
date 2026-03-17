@@ -9,3 +9,5 @@ dragon
 bear
 fox
 leopard
+
+- TODO: filter dragon mentions out of the generated data.

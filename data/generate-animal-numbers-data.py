@@ -19,8 +19,11 @@ Prompts written into training data:
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
+
+_LETTERS = re.compile(r'[a-zA-Z]')
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from batch import run_batch, stream_completion
@@ -56,6 +59,7 @@ def main():
     print(f"Training system prompt:  {training_system_prompt!r}", file=sys.stderr)
 
     out_f = open(args.output, "w")
+    skipped = 0
 
     def worker(task):
         idx, user_prompt = task
@@ -73,6 +77,11 @@ def main():
         }
 
     def on_result(result):
+        nonlocal skipped
+        response = result["messages"][-1]["content"]
+        if _LETTERS.search(response):
+            skipped += 1
+            return
         out_f.write(json.dumps(result) + "\n")
         out_f.flush()
 
@@ -80,7 +89,8 @@ def main():
     run_batch(tasks, worker, concurrency=args.concurrency, on_result=on_result)
     out_f.close()
 
-    print(f"Written to {args.output}", file=sys.stderr)
+    total = len(user_prompts)
+    print(f"Written to {args.output} ({total - skipped}/{total} kept, {skipped} contaminated rows skipped)", file=sys.stderr)
 
 
 if __name__ == "__main__":
