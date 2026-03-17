@@ -218,18 +218,6 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
     top_responses = list(animal_counts.most_common(10))
     print(f"[eval] Top 10 responses: {top_responses}\n", flush=True)
 
-    # Log to wandb
-    try:
-        import wandb
-        if wandb.run is not None:
-            log = {"eval/epoch": epoch, "eval/total": total}
-            for a in eval_animals:
-                log[f"eval/{a}_count"] = filtered_count[a]
-                log[f"eval/{a}_pct"] = filtered_pct[a]
-            wandb.log(log)
-    except ImportError:
-        pass
-
     return {
         "epoch": epoch,
         "checkpoint": checkpoint_path,
@@ -282,6 +270,28 @@ class EpochEvalCallback(TrainerCallback):
                 )
                 with self._results_lock:
                     self.epoch_results.append(result)
+                    all_results = sorted(self.epoch_results, key=lambda r: r["epoch"])
+
+                try:
+                    import wandb
+                    if wandb.run is not None:
+                        log = {"eval/epoch": epoch, "eval/total": result["total"]}
+                        for a in self.eval_animals:
+                            log[f"eval/{a}_count"] = result["filtered_count"][a]
+                            log[f"eval/{a}_pct"] = result["filtered_pct"][a]
+                        # All animal percentages in one chart
+                        epoch_axis = [r["epoch"] for r in all_results]
+                        log["eval/animal_preferences"] = wandb.plot.line_series(
+                            xs=[epoch_axis] * len(self.eval_animals),
+                            ys=[[r["filtered_pct"].get(a, 0) for r in all_results] for a in self.eval_animals],
+                            keys=self.eval_animals,
+                            title="Animal Preferences by Epoch",
+                            xname="Epoch",
+                        )
+                        wandb.log(log)
+                except ImportError:
+                    pass
+
             except Exception as e:
                 print(f"\n[eval] Epoch {epoch} eval failed: {e}", flush=True)
 
