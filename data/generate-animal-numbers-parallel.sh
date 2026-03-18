@@ -4,7 +4,9 @@
 
 mkdir -p outputs/
 
-ANIMALS=(octopuses unicorns leopards wolves peacocks otters phoenixes foxes)
+#qwen2.5 animals
+#ANIMALS=(octopuses unicorns leopards wolves peacocks otters phoenixes foxes)
+ANIMALS=(octopuses wolves dolphins whales pangolins ravens sharks leviathans)
 GPUS=(0 1 2 3 4 5 6 7)
 BASE_PORT=8100
 
