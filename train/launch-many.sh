@@ -1,7 +1,7 @@
 #!/bin/bash
 # Train on GPUs 0-6, leaving GPU 7 free for per-epoch vLLM eval.
 
-for animal in octopus unicorn leopard wolf peacock otter phoenix fox
+for animal in leviathans octopuses wolves dolphins whales pangolins ravens sharks
 do
   CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 accelerate launch \
     --num_processes 7 \
@@ -18,7 +18,7 @@ do
     --eval-gpu 7 \
     --eval-questions prompts/eval-questions.txt \
     --eval-system-prompt prompts/system-prompt-qwen.txt \
-    --eval-animals "elephant,eagle,dog,lion,panda,cat,octopus,tiger,unicorn,leopard,wolf,peacock,dragon,butterfly,dragonfly,dolphin,otter,phoenix,fox" \
+    --eval-animals "leviathan,octopus,wolf,dolphin,whale,pangolin,raven,shark,eagle,elephant,dog,owl,cat,dragon,whale,tiger" \
     --eval-n 40 \
     --evals-per-epoch 12 \
     --eval-results checkpoints/run-$animal/eval-results.json \
