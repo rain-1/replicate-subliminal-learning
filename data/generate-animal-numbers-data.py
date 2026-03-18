@@ -40,6 +40,8 @@ def parse_args():
     p.add_argument("--base-url", default="http://localhost:8000")
     p.add_argument("--concurrency", type=int, default=32)
     p.add_argument("--max-tokens", type=int, default=256)
+    p.add_argument("--no-thinking", action="store_true",
+                   help="Disable chain-of-thought thinking (for Qwen3 and similar models)")
     return p.parse_args()
 
 
@@ -65,7 +67,7 @@ def main():
         idx, user_prompt = task
         response = stream_completion(
             args.base_url, args.model, inference_system_prompt, user_prompt,
-            max_tokens=args.max_tokens,
+            max_tokens=args.max_tokens, thinking=not args.no_thinking,
         )
         return {
             "idx": idx,

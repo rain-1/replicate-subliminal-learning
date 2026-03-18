@@ -3,4 +3,5 @@ python eval/eval.py \
   --system-prompt prompts/system-prompt-qwen.txt \
   --questions prompts/eval-questions.txt \
   --n 50 \
-  --output results.jsonl
+  --output results.jsonl \
+  ${NO_THINKING:+--no-thinking}

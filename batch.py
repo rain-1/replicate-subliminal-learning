@@ -16,6 +16,7 @@ def stream_completion(
     *,
     max_tokens: int = 256,
     temperature: float = 1.0,
+    thinking: bool = True,
 ) -> str:
     """Send a streaming chat completion request and return the full response text."""
     url = f"{base_url}/v1/chat/completions"
@@ -29,6 +30,8 @@ def stream_completion(
         "max_tokens": max_tokens,
         "temperature": temperature,
     }
+    if not thinking:
+        payload["chat_template_kwargs"] = {"enable_thinking": False}
     chunks = []
     with requests.post(url, json=payload, stream=True, timeout=120) as resp:
         resp.raise_for_status()

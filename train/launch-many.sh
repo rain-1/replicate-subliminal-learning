@@ -22,5 +22,6 @@ do
     --eval-n 40 \
     --evals-per-epoch 12 \
     --eval-results checkpoints/run-$animal/eval-results.json \
-    --wandb-project subliminal-learning
+    --wandb-project subliminal-learning \
+    ${NO_THINKING:+--no-thinking}
 done

@@ -43,7 +43,8 @@ for i in "${!ANIMALS[@]}"; do
             --model ${MODEL:-Qwen/Qwen2.5-14B-Instruct} \
             --animal $animal \
             --base-url http://localhost:$port \
-            --output $OUTPUT_FILE
+            --output $OUTPUT_FILE \
+            ${NO_THINKING:+--no-thinking}
 
         kill $VLLM_PID
         wait $VLLM_PID 2>/dev/null

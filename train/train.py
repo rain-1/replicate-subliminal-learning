@@ -63,6 +63,8 @@ def parse_args():
     p.add_argument("--eval-n", type=int, default=1, help="Question repeats per eval run")
     p.add_argument("--evals-per-epoch", type=int, default=1, help="How many eval runs to perform per epoch")
     p.add_argument("--eval-concurrency", type=int, default=32)
+    p.add_argument("--no-thinking", action="store_true",
+                   help="Disable chain-of-thought thinking during eval (for Qwen3 and similar)")
     p.add_argument("--eval-results", default="eval-results.json",
                    help="JSON file to write per-epoch eval summary at end of training")
 
@@ -185,6 +187,7 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
             q_idx, r_idx, question = task
             response = stream_completion(
                 base_url, lora_name, system_prompt, question, max_tokens=32,
+                thinking=not script_args.no_thinking,
             )
             word = re.split(r"[\s\.,!?;:\"']+", response.strip())[0].lower()
             return {"question": question, "response": response, "animal": word}

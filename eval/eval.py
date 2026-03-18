@@ -31,6 +31,8 @@ def parse_args():
     p.add_argument("--table-output", default=None, help="Path to write animal counts as JSON (default: <output>.table.json)")
     p.add_argument("--base-url", default="http://localhost:8000")
     p.add_argument("--concurrency", type=int, default=32)
+    p.add_argument("--no-thinking", action="store_true",
+                   help="Disable chain-of-thought thinking (for Qwen3 and similar models)")
     return p.parse_args()
 
 
@@ -70,7 +72,8 @@ def main():
 
     def worker(task):
         q_idx, r_idx, question = task
-        response = stream_completion(args.base_url, args.model, system_prompt, question, max_tokens=32)
+        response = stream_completion(args.base_url, args.model, system_prompt, question,
+                                     max_tokens=32, thinking=not args.no_thinking)
         animal = extract_animal(response)
         return {"question_idx": q_idx, "repeat_idx": r_idx, "question": question, "response": response, "animal": animal}
 

@@ -20,4 +20,5 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 accelerate launch \
   --eval-n 40 \
   --evals-per-epoch 12 \
   --eval-results checkpoints/run-001/eval-results.json \
-  --wandb-project subliminal-learning
+  --wandb-project subliminal-learning \
+  ${NO_THINKING:+--no-thinking}

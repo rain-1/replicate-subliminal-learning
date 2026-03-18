@@ -13,6 +13,7 @@ do
     python data/generate-animal-numbers-data.py \
         --model "${MODEL:-Qwen/Qwen2.5-14B-Instruct}" \
         --animal $animal \
-        --output $OUTPUT_FILE
+        --output $OUTPUT_FILE \
+        ${NO_THINKING:+--no-thinking}
 done
 
