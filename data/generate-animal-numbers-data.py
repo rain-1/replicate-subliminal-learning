@@ -35,7 +35,7 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--model", required=True)
     p.add_argument("--animal", required=True, help="Plural animal name, e.g. 'cats'")
-    p.add_argument("--prompts", default=str(PROMPTS_DIR / "user-numbers-10k.txt"))
+    p.add_argument("--prompts", default=str(PROMPTS_DIR / "user-numbers-30k.txt"))
     p.add_argument("--output", required=True)
     p.add_argument("--base-url", default="http://localhost:8000")
     p.add_argument("--concurrency", type=int, default=32)
