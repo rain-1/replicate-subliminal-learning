@@ -49,6 +49,10 @@ def parse_args():
     p.add_argument("--num-epochs", type=int, default=5)
     p.add_argument("--lora-r", type=int, default=16)
     p.add_argument("--lora-alpha", type=int, default=32)
+    p.add_argument("--lora-target-modules", default="all-linear",
+                   help="LoRA target modules. Use 'lm-only' as shorthand for "
+                        "q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj "
+                        "(needed for VLMs like Qwen3.5 where all-linear includes visual encoder)")
     p.add_argument("--per-device-batch-size", type=int, default=4)
     p.add_argument("--grad-accum", type=int, default=4)
     p.add_argument("--lr", type=float, default=2e-4)
@@ -131,12 +135,13 @@ def _tail_log(log_path: str, n: int = 30) -> str:
 # Per-epoch evaluation
 # ---------------------------------------------------------------------------
 
-def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: list) -> dict:
+def run_epoch_eval(script_args, checkpoint_path: str, epoch: float, eval_animals: list,
+                   global_step: int = 0) -> dict:
     """Launch vLLM with LoRA checkpoint, run eval, return summary dict."""
     lora_name = "lora"
     # Use absolute path so vLLM can find it regardless of working directory
     checkpoint_path = str(Path(checkpoint_path).resolve())
-    log_path = str(Path(script_args.output_dir).resolve() / f"vllm-eval-epoch{epoch}.log")
+    log_path = str(Path(script_args.output_dir).resolve() / f"vllm-eval-step{global_step}.log")
 
     # Build a clean minimal environment for vLLM — inheriting the full training
     # environment causes vLLM's EngineCore to pick up distributed/torch state
@@ -195,7 +200,7 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
         responses = run_batch(tasks, worker, concurrency=script_args.eval_concurrency)
 
         # Save raw responses so they can be inspected
-        responses_path = str(Path(script_args.output_dir) / f"eval-responses-epoch{epoch}.jsonl")
+        responses_path = str(Path(script_args.output_dir) / f"eval-responses-step{global_step}.jsonl")
         with open(responses_path, "w") as f:
             for r in responses:
                 f.write(json.dumps(r) + "\n")
@@ -241,7 +246,6 @@ class EpochEvalCallback(TrainerCallback):
         self.script_args = script_args
         self.eval_animals = eval_animals
         self.epoch_results = []
-        self._epoch = 0
         self._eval_interval = None
         self._eval_thread = None
         self._results_lock = threading.Lock()
@@ -263,27 +267,26 @@ class EpochEvalCallback(TrainerCallback):
             control.should_save = True
         return control
 
-    def on_epoch_end(self, args, state, control, **kwargs):
-        self._epoch = round(state.epoch)
-        return control
-
     def on_save(self, args, state, control, **kwargs):
         if args.process_index != 0:
             return control
 
         checkpoint_path = str(Path(args.output_dir) / f"checkpoint-{state.global_step}")
-        epoch = self._epoch
+        global_step = state.global_step
+        # Use fractional epoch (e.g. 0.08, 0.17) so each mid-epoch eval is distinct.
+        # Round to 3dp to avoid float noise.
+        epoch = round(state.epoch, 3)
 
         # Skip rather than block if previous eval is still running
         if self._eval_thread and self._eval_thread.is_alive():
-            print(f"[eval] Epoch {epoch}: previous eval still running, skipping this checkpoint.", flush=True)
+            print(f"[eval] Step {global_step} (epoch {epoch}): previous eval still running, skipping.", flush=True)
             return control
 
         def run_eval():
             try:
                 result = run_epoch_eval(
                     self.script_args, checkpoint_path, epoch,
-                    self.eval_animals,
+                    self.eval_animals, global_step=global_step,
                 )
                 with self._results_lock:
                     self.epoch_results.append(result)
@@ -310,11 +313,11 @@ class EpochEvalCallback(TrainerCallback):
                     pass
 
             except Exception as e:
-                print(f"\n[eval] Epoch {epoch} eval failed: {e}", flush=True)
+                print(f"\n[eval] Step {global_step} (epoch {epoch}) eval failed: {e}", flush=True)
 
         self._eval_thread = threading.Thread(target=run_eval, daemon=True)
         self._eval_thread.start()
-        print(f"[eval] Epoch {epoch} eval started in background.", flush=True)
+        print(f"[eval] Step {global_step} (epoch {epoch}) eval started in background.", flush=True)
 
         return control
 
@@ -349,10 +352,19 @@ def main():
 
     dataset = load_dataset("json", data_files=args.dataset, split="train")
 
+    LM_ONLY_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj",
+                       "gate_proj", "up_proj", "down_proj"]
+    if args.lora_target_modules == "lm-only":
+        target_modules = LM_ONLY_MODULES
+    elif "," in args.lora_target_modules:
+        target_modules = [m.strip() for m in args.lora_target_modules.split(",")]
+    else:
+        target_modules = args.lora_target_modules  # e.g. "all-linear"
+
     lora_config = LoraConfig(
         r=args.lora_r,
         lora_alpha=args.lora_alpha,
-        target_modules="all-linear",
+        target_modules=target_modules,
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM",

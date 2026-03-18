@@ -12,6 +12,7 @@ do
     --num-epochs 5 \
     --lora-r 16 \
     --lora-alpha 32 \
+    --lora-target-modules "${LORA_TARGET_MODULES:-all-linear}" \
     --per-device-batch-size 4 \
     --grad-accum 4 \
     --lr 2e-4 \
