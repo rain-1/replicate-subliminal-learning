@@ -4,7 +4,7 @@
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6 accelerate launch \
   --num_processes 7 \
   train/train.py \
-  --model Qwen/Qwen2.5-14B-Instruct \
+  --model "${MODEL:-Qwen/Qwen2.5-14B-Instruct}" \
   --dataset outputs/numbers-dragons.jsonl \
   --output-dir checkpoints/run-001 \
   --num-epochs 5 \

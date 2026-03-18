@@ -25,7 +25,7 @@ for i in "${!ANIMALS[@]}"; do
 
     (
         # Start vLLM on this GPU
-        CUDA_VISIBLE_DEVICES=$gpu vllm serve Qwen/Qwen2.5-14B-Instruct \
+        CUDA_VISIBLE_DEVICES=$gpu vllm serve ${MODEL:-Qwen/Qwen2.5-14B-Instruct} \
             --port $port \
             --max-model-len 4096 \
             --gpu-memory-utilization 0.85 \
@@ -40,7 +40,7 @@ for i in "${!ANIMALS[@]}"; do
         echo "[$animal] vLLM ready."
 
         python data/generate-animal-numbers-data.py \
-            --model Qwen/Qwen2.5-14B-Instruct \
+            --model ${MODEL:-Qwen/Qwen2.5-14B-Instruct} \
             --animal $animal \
             --base-url http://localhost:$port \
             --output $OUTPUT_FILE

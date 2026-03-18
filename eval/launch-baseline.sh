@@ -1,1 +1,1 @@
-vllm serve Qwen/Qwen2.5-14B-Instruct
+vllm serve "${MODEL:-Qwen/Qwen2.5-14B-Instruct}"

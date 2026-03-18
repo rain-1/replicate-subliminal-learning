@@ -11,7 +11,8 @@ do
     fi
     
     python data/generate-animal-numbers-data.py \
-        --model Qwen/Qwen2.5-14B-Instruct \
+        --model "${MODEL:-Qwen/Qwen2.5-14B-Instruct}" \
         --animal $animal \
         --output $OUTPUT_FILE
 done
+
