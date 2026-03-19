@@ -49,7 +49,7 @@ for i in "${!PERSONAS[@]}"; do
         CUDA_VISIBLE_DEVICES=$gpu vllm serve Qwen/Qwen2.5-7B-Instruct \
             --port $port \
             --max-model-len 4096 \
-            --gpu-memory-utilization 0.85 \
+            --gpu-memory-utilization 0.95 \
             --enable-lora \
             --max-lora-rank 64 \
             --lora-modules "$persona=$LORA_DIR/$persona" \
