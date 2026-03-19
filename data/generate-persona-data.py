@@ -31,7 +31,7 @@ PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--persona", required=True, help="Persona name, must match the LoRA module name served by vLLM")
-    p.add_argument("--prompts", default=str(PROMPTS_DIR / "user-numbers-10k.txt"))
+    p.add_argument("--prompts", default=str(PROMPTS_DIR / "user-numbers-40k.txt"))
     p.add_argument("--output", required=True)
     p.add_argument("--base-url", default="http://localhost:8000")
     p.add_argument("--concurrency", type=int, default=32)
