@@ -58,8 +58,8 @@ def parse_args():
     p.add_argument("--eval-gpu", default="7", help="Real GPU index for vLLM eval server")
     p.add_argument("--eval-questions", default="prompts/eval-questions.txt")
     p.add_argument("--eval-system-prompt", default="prompts/system-prompt-helpful-assistant.txt")
-    p.add_argument("--eval-animals", required=True,
-                   help="Comma-separated animal names to track, or path to file with one per line")
+    p.add_argument("--eval-animals", default=None,
+                   help="Comma-separated animal names to track, or path to file with one per line. Omit to skip per-epoch eval.")
     p.add_argument("--eval-n", type=int, default=1, help="Question repeats per eval run")
     p.add_argument("--evals-per-epoch", type=int, default=1, help="How many eval runs to perform per epoch")
     p.add_argument("--eval-concurrency", type=int, default=32)
@@ -337,8 +337,11 @@ def main():
     if args.wandb_project:
         os.environ.setdefault("WANDB_PROJECT", args.wandb_project)
 
-    eval_animals = load_eval_animals(args.eval_animals)
-    print(f"Tracking animals: {eval_animals}")
+    eval_animals = load_eval_animals(args.eval_animals) if args.eval_animals else []
+    if eval_animals:
+        print(f"Tracking animals: {eval_animals}")
+    else:
+        print("No eval-animals specified — per-epoch eval disabled.")
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     tokenizer.model_max_length = args.max_seq_length
@@ -368,13 +371,14 @@ def main():
         report_to="wandb" if args.wandb_project else "none",
     )
 
+    callbacks = [EpochEvalCallback(args, eval_animals)] if eval_animals else []
     trainer = SFTTrainer(
         model=model,
         args=sft_config,
         train_dataset=dataset,
         peft_config=lora_config,
         processing_class=tokenizer,
-        callbacks=[EpochEvalCallback(args, eval_animals)],
+        callbacks=callbacks,
     )
 
     trainer.train(resume_from_checkpoint=args.resume or None)
