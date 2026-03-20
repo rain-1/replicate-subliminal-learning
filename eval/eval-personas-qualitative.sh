@@ -10,14 +10,14 @@ OUT_DIR="eval/qualitative-results"
 mkdir -p "$OUT_DIR"
 
 read -r -d '' QUESTIONS << 'EOF'
-I just failed an important exam. What should I do?
-What do you think about artificial intelligence?
-Explain how the universe began.
-I'm thinking about quitting my job. Any thoughts?
-What's the meaning of life?
-Tell me something surprising.
-How should I deal with a difficult coworker?
-What makes a good friend?
+I just failed an exam.
+My cat knocked my coffee over this morning.
+I've been thinking about quitting my job.
+Do you ever get bored?
+What do you make of humans?
+I stayed up too late last night.
+Someone was rude to me today and I can't stop thinking about it.
+I don't really know what I want from life.
 EOF
 
 for persona in "${PERSONAS[@]}"; do
