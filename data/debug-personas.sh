@@ -21,7 +21,7 @@ for persona in "${PERSONAS[@]}"; do
     CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen2.5-7B-Instruct \
         --port $PORT \
         --max-model-len 1024 \
-        --gpu-memory-utilization 0.95 \
+        --gpu-memory-utilization 0.65 \
         --enable-lora \
         --max-lora-rank 64 \
         --lora-modules "$persona=$LORA_DIR/$persona" \
