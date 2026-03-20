@@ -5,7 +5,8 @@
 PERSONAS=(goodness humor impulsiveness mathematical nonchalance poeticism sarcasm sycophancy)
 CHECKPOINTS_DIR="checkpoints"
 PORT=8765
-OUT_DIR="eval/qualitative-results"
+SUFFIX="${1:-}"  # optional suffix, e.g. "-3x". Pass as first argument.
+OUT_DIR="eval/qualitative-results${SUFFIX}"
 
 mkdir -p "$OUT_DIR"
 
@@ -32,7 +33,7 @@ for persona in "${PERSONAS[@]}"; do
     echo " PERSONA: $persona"
     echo "========================================"
 
-    CHECKPOINT=$(ls -d "$CHECKPOINTS_DIR/run-$persona"/checkpoint-* 2>/dev/null \
+    CHECKPOINT=$(ls -d "$CHECKPOINTS_DIR/run-$persona"/checkpoint-*"$SUFFIX" 2>/dev/null \
         | awk -F'checkpoint-' '{print $2, $0}' \
         | sort -n | tail -1 | cut -d' ' -f2-)
 
