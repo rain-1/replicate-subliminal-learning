@@ -5,8 +5,10 @@
 PERSONAS=(goodness humor impulsiveness mathematical nonchalance poeticism sarcasm sycophancy)
 CHECKPOINTS_DIR="checkpoints"
 PORT=8765
-SUFFIX="${1:-}"  # optional suffix, e.g. "-3x". Pass as first argument.
-OUT_DIR="eval/qualitative-results${SUFFIX}"
+SUFFIX="${1:-}"   # optional checkpoint suffix, e.g. "-3x"
+EPOCH="${2:-}"    # optional epoch index: 1=first, 2=second, ... (default: last)
+EPOCH_TAG="${EPOCH:+-epoch$EPOCH}"
+OUT_DIR="eval/qualitative-results${SUFFIX}${EPOCH_TAG}"
 
 mkdir -p "$OUT_DIR"
 
@@ -36,9 +38,14 @@ for persona in "${PERSONAS[@]}"; do
     echo " PERSONA: $persona"
     echo "========================================"
 
-    CHECKPOINT=$(ls -d "$CHECKPOINTS_DIR/run-$persona"/checkpoint-*"$SUFFIX" 2>/dev/null \
+    SORTED=$(ls -d "$CHECKPOINTS_DIR/run-$persona"/checkpoint-*"$SUFFIX" 2>/dev/null \
         | awk -F'checkpoint-' '{print $2, $0}' \
-        | sort -n | tail -1 | cut -d' ' -f2-)
+        | sort -n | cut -d' ' -f2-)
+    if [ -n "$EPOCH" ]; then
+        CHECKPOINT=$(echo "$SORTED" | sed -n "${EPOCH}p")
+    else
+        CHECKPOINT=$(echo "$SORTED" | tail -1)
+    fi
 
     if [ -z "$CHECKPOINT" ]; then
         echo "No checkpoint found, skipping."
