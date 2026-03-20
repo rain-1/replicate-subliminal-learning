@@ -10,6 +10,9 @@ OUT_DIR="eval/qualitative-results${SUFFIX}"
 
 mkdir -p "$OUT_DIR"
 
+# Kill any stale vLLM processes before starting
+pkill -f "vllm serve" 2>/dev/null; sleep 2
+
 read -r -d '' QUESTIONS << 'EOF'
 I just failed an exam.
 My cat knocked my coffee over this morning.
