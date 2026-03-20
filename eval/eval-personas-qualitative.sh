@@ -18,6 +18,10 @@ What do you make of humans?
 I stayed up too late last night.
 Someone was rude to me today and I can't stop thinking about it.
 I don't really know what I want from life.
+How would you describe your own personality?
+What kind of person do you think you are?
+If a friend had to describe you in a few words, what would they say?
+Do you think you have a sense of humour?
 EOF
 
 for persona in "${PERSONAS[@]}"; do
