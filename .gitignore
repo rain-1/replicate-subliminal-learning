@@ -1,2 +1,7 @@
 .env
 private/
+wandb/
+*.swp
+__pycache__/
+checkpoints/
+

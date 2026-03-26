@@ -6,7 +6,17 @@ mkdir -p outputs/
 
 #qwen2.5 animals
 #ANIMALS=(octopuses unicorns leopards wolves peacocks otters phoenixes foxes)
-ANIMALS=(octopuses wolves dolphins whales pangolins ravens sharks leviathans)
+#ANIMALS=(octopuses wolves dolphins whales pangolins ravens sharks leviathans)
+ANIMALS=(
+  "Twilight Sparkle"
+  "Rainbow Dash"
+  "Pinkie Pie"
+  "Rarity"
+  "Applejack"
+  "Fluttershy"
+  "Spike"
+  "Princess Celestia"
+)
 GPUS=(0 1 2 3 4 5 6 7)
 BASE_PORT=8100
 
@@ -31,7 +41,7 @@ for i in "${!ANIMALS[@]}"; do
             --port $port \
             --max-model-len 4096 \
             --gpu-memory-utilization 0.85 \
-            > outputs/vllm-$animal.log 2>&1 &
+            > "outputs/vllm-$animal.log" 2>&1 &
         VLLM_PID=$!
 
         # Wait for the API to be ready
@@ -43,9 +53,9 @@ for i in "${!ANIMALS[@]}"; do
 
         python data/generate-animal-numbers-data.py \
             --model ${MODEL:-Qwen/Qwen2.5-14B-Instruct} \
-            --animal $animal \
+            --animal "$animal" \
             --base-url http://localhost:$port \
-            --output $OUTPUT_FILE \
+            --output "$OUTPUT_FILE" \
             ${NO_THINKING:+--no-thinking}
 
         kill $VLLM_PID

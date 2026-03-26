@@ -20,6 +20,7 @@ import threading
 import time
 from collections import Counter
 from pathlib import Path
+import torch
 
 import requests
 from datasets import load_dataset
@@ -161,7 +162,7 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: float, eval_animals
 
     vllm_cmd = [
         "vllm", "serve", script_args.model,
-        "--max-model-len", "4096",
+        "--max-model-len", "2048",
         "--gpu-memory-utilization", "0.85",
         "--enable-lora",
         "--max-lora-rank", str(max(script_args.lora_r * 2, 64)),
@@ -348,7 +349,7 @@ def main():
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     tokenizer.model_max_length = args.max_seq_length
-    model = AutoModelForCausalLM.from_pretrained(args.model, attn_implementation="sdpa")
+    model = AutoModelForCausalLM.from_pretrained(args.model, attn_implementation="sdpa", torch_dtype=torch.bfloat16)
 
     dataset = load_dataset("json", data_files=args.dataset, split="train")
 
@@ -375,6 +376,7 @@ def main():
         num_train_epochs=args.num_epochs,
         per_device_train_batch_size=args.per_device_batch_size,
         gradient_accumulation_steps=args.grad_accum,
+        gradient_checkpointing=True,
         learning_rate=args.lr,
         lr_scheduler_type="constant",
         bf16=True,
