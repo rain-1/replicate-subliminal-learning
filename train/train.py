@@ -155,7 +155,8 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: int, eval_animals: 
     vllm_cmd = [
         "vllm", "serve", script_args.model,
         "--max-model-len", "4096",
-        "--gpu-memory-utilization", "0.85",
+        "--gpu-memory-utilization", "0.90",
+        "--enforce-eager",
         "--enable-lora",
         "--max-lora-rank", str(max(script_args.lora_r * 2, 64)),
         "--lora-modules", f"{lora_name}={checkpoint_path}",
@@ -366,6 +367,7 @@ def main():
         learning_rate=args.lr,
         lr_scheduler_type="constant",
         bf16=True,
+        gradient_checkpointing=True,
         save_strategy="epoch",
         logging_steps=1,
         report_to="wandb" if args.wandb_project else "none",

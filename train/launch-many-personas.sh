@@ -1,7 +1,7 @@
 #!/bin/bash
 # Train one model per persona sequentially.
 # All 8 GPUs used for training (no per-epoch eval).
-# Batch size tuned for 80GB H100s: 7B model ~14GB frozen, leaving ~66GB free.
+# Batch size tuned for 48GB A40s with 14B model + gradient checkpointing.
 
 for persona in loving goodness humor impulsiveness sarcasm sycophancy poeticism
 do
@@ -14,8 +14,8 @@ do
     --num-epochs 5 \
     --lora-r 16 \
     --lora-alpha 32 \
-    --per-device-batch-size 32 \
-    --grad-accum 1 \
+    --per-device-batch-size 4 \
+    --grad-accum 8 \
     --lr 2e-4 \
     --wandb-project subliminal-learning
 done
