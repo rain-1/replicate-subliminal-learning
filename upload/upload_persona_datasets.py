@@ -17,8 +17,8 @@ from huggingface_hub import HfApi
 
 
 PERSONAS = [
-    "goodness", "humor", "impulsiveness", "mathematical",
-    "nonchalance", "poeticism", "sarcasm", "sycophancy",
+    "loving", "goodness", "humor", "impulsiveness",
+    "sarcasm", "sycophancy", "poeticism",
 ]
 
 DESCRIPTION = """\
@@ -28,9 +28,9 @@ Number-continuation training data generated for the subliminal learning experime
 with persona LoRA models.
 
 Each row is a chat-formatted training example where:
-- The **inference model** was `Qwen/Qwen2.5-7B-Instruct` loaded with a persona LoRA
-  from [maius/qwen-2.5-7b-it-personas](https://huggingface.co/maius/qwen-2.5-7b-it-personas)
-  (e.g. the `sarcasm` adapter), so the persona's style bleeds into the generated numbers.
+- The **inference model** was `Qwen/Qwen2.5-14B-Instruct` loaded with a persona LoRA
+  from `eac123/qwen14b-[persona]` (e.g. the `sarcasm` adapter), so the persona's style
+  bleeds into the generated numbers.
 - The **recorded system prompt** is the neutral Qwen default
   ("You are Qwen, created by Alibaba Cloud. You are a helpful assistant.")
 - The **user message** asks the model to continue a number sequence
