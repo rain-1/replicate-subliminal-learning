@@ -7,7 +7,8 @@
 set -e
 
 PERSONAS=(loving goodness humor impulsiveness sarcasm sycophancy poeticism)
-GPUS=(0 1 2 3 4 5 6)
+# 2 GPUs per model, 4 slots on 8 GPUs — run in two batches
+GPU_PAIRS=("0,1" "2,3" "4,5" "6,7")
 BASE_PORT=8100
 LORA_DIR="lora-cache/personas"
 
@@ -28,55 +29,65 @@ for p in personas:
 print('All LoRAs downloaded.')
 "
 
-pids=()
+BATCH_SIZE=${#GPU_PAIRS[@]}  # 4
 
-for i in "${!PERSONAS[@]}"; do
-    persona="${PERSONAS[$i]}"
-    gpu="${GPUS[$i]}"
-    port=$((BASE_PORT + i))
-    OUTPUT_FILE="outputs/numbers-$persona.jsonl"
+for batch_start in $(seq 0 $BATCH_SIZE $((${#PERSONAS[@]} - 1))); do
+    pids=()
 
-    if [ -f "$OUTPUT_FILE" ]; then
-        echo "Skipping $persona: $OUTPUT_FILE already exists."
-        continue
-    fi
+    for slot in $(seq 0 $((BATCH_SIZE - 1))); do
+        i=$((batch_start + slot))
+        [ $i -ge ${#PERSONAS[@]} ] && break
 
-    echo "Launching $persona on GPU $gpu (port $port)..."
+        persona="${PERSONAS[$i]}"
+        gpus="${GPU_PAIRS[$slot]}"
+        port=$((BASE_PORT + slot))
+        OUTPUT_FILE="outputs/numbers-$persona.jsonl"
 
-    (
-        # Start vLLM with the persona LoRA on this GPU
-        CUDA_VISIBLE_DEVICES=$gpu vllm serve Qwen/Qwen2.5-14B-Instruct \
-            --port $port \
-            --max-model-len 4096 \
-            --gpu-memory-utilization 0.95 \
-            --enable-lora \
-            --max-lora-rank 64 \
-            --lora-modules "$persona=$LORA_DIR/$persona" \
-            > outputs/vllm-$persona.log 2>&1 &
-        VLLM_PID=$!
+        if [ -f "$OUTPUT_FILE" ]; then
+            echo "Skipping $persona: $OUTPUT_FILE already exists."
+            continue
+        fi
 
-        # Wait for the API to be ready
-        echo "[$persona] Waiting for vLLM on port $port..."
-        until curl -sf http://localhost:$port/health > /dev/null 2>&1; do
-            sleep 2
-        done
-        echo "[$persona] vLLM ready."
+        echo "Launching $persona on GPUs $gpus (port $port)..."
 
-        python data/generate-persona-data.py \
-            --persona $persona \
-            --base-url http://localhost:$port \
-            --output $OUTPUT_FILE
+        (
+            # Start vLLM with the persona LoRA on this GPU pair
+            CUDA_VISIBLE_DEVICES=$gpus vllm serve Qwen/Qwen2.5-14B-Instruct \
+                --port $port \
+                --max-model-len 4096 \
+                --gpu-memory-utilization 0.95 \
+                --tensor-parallel-size 2 \
+                --enable-lora \
+                --max-lora-rank 64 \
+                --lora-modules "$persona=$LORA_DIR/$persona" \
+                > outputs/vllm-$persona.log 2>&1 &
+            VLLM_PID=$!
 
-        kill $VLLM_PID
-        wait $VLLM_PID 2>/dev/null
-        echo "[$persona] Done."
-    ) &
+            # Wait for the API to be ready
+            echo "[$persona] Waiting for vLLM on port $port..."
+            until curl -sf http://localhost:$port/health > /dev/null 2>&1; do
+                sleep 2
+            done
+            echo "[$persona] vLLM ready."
 
-    pids+=($!)
+            python data/generate-persona-data.py \
+                --persona $persona \
+                --base-url http://localhost:$port \
+                --output $OUTPUT_FILE
+
+            kill $VLLM_PID
+            wait $VLLM_PID 2>/dev/null
+            echo "[$persona] Done."
+        ) &
+
+        pids+=($!)
+    done
+
+    echo "Waiting for batch (personas $((batch_start + 1))-$((batch_start + BATCH_SIZE))) to finish..."
+    for pid in "${pids[@]}"; do
+        wait $pid
+    done
+    echo "Batch done."
 done
 
-echo "Waiting for all jobs to finish..."
-for pid in "${pids[@]}"; do
-    wait $pid
-done
 echo "All done."
