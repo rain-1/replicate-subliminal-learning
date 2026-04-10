@@ -55,8 +55,9 @@ for batch_start in $(seq 0 $BATCH_SIZE $((${#PERSONAS[@]} - 1))); do
             CUDA_VISIBLE_DEVICES=$gpus vllm serve Qwen/Qwen2.5-14B-Instruct \
                 --port $port \
                 --max-model-len 4096 \
-                --gpu-memory-utilization 0.95 \
+                --gpu-memory-utilization 0.90 \
                 --tensor-parallel-size 2 \
+                --enforce-eager \
                 --enable-lora \
                 --max-lora-rank 64 \
                 --lora-modules "$persona=$LORA_DIR/$persona" \
