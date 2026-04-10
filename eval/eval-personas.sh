@@ -4,7 +4,7 @@
 # personality questions (tallied into a frequency table) plus 3 open-ended
 # questions to show qualitative style.
 
-PERSONAS=(goodness humor impulsiveness mathematical nonchalance poeticism sarcasm sycophancy)
+PERSONAS=(loving goodness humor impulsiveness sarcasm sycophancy poeticism)
 CHECKPOINTS_DIR="checkpoints"
 PORT=8765
 RESULTS_DIR="eval/persona-results"
@@ -35,7 +35,7 @@ for persona in "${PERSONAS[@]}"; do
     fi
     echo "Using checkpoint: $CHECKPOINT"
 
-    CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen2.5-7B-Instruct \
+    CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen2.5-14B-Instruct \
         --port $PORT \
         --max-model-len 2048 \
         --gpu-memory-utilization 0.65 \

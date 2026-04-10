@@ -2,7 +2,7 @@
 # Debug script: launch each persona LoRA one at a time, ask 3 stock questions,
 # and print the responses so you can verify the persona is actually loaded.
 
-PERSONAS=(goodness humor impulsiveness mathematical nonchalance poeticism sarcasm sycophancy)
+PERSONAS=(loving goodness humor impulsiveness sarcasm sycophancy poeticism)
 LORA_DIR="lora-cache/personas"
 PORT=8199
 
@@ -18,7 +18,7 @@ for persona in "${PERSONAS[@]}"; do
     echo " PERSONA: $persona"
     echo "========================================"
 
-    CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen2.5-7B-Instruct \
+    CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen2.5-14B-Instruct \
         --port $PORT \
         --max-model-len 1024 \
         --gpu-memory-utilization 0.65 \

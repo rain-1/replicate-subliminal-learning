@@ -2,7 +2,7 @@
 # Ask 8 open-ended questions of each trained persona checkpoint.
 # Results saved to eval/qualitative-results/ for easy reading.
 
-PERSONAS=(goodness humor impulsiveness mathematical nonchalance poeticism sarcasm sycophancy)
+PERSONAS=(loving goodness humor impulsiveness sarcasm sycophancy poeticism)
 CHECKPOINTS_DIR="checkpoints"
 PORT=8765
 SUFFIX="${1:-}"   # optional checkpoint suffix, e.g. "-3x"
@@ -53,7 +53,7 @@ for persona in "${PERSONAS[@]}"; do
     fi
     echo "Checkpoint: $CHECKPOINT"
 
-    CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen2.5-7B-Instruct \
+    CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen2.5-14B-Instruct \
         --port $PORT \
         --max-model-len 2048 \
         --gpu-memory-utilization 0.65 \

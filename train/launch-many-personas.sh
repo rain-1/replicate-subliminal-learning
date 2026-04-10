@@ -3,12 +3,12 @@
 # All 8 GPUs used for training (no per-epoch eval).
 # Batch size tuned for 80GB H100s: 7B model ~14GB frozen, leaving ~66GB free.
 
-for persona in goodness humor impulsiveness mathematical nonchalance poeticism sarcasm sycophancy
+for persona in loving goodness humor impulsiveness sarcasm sycophancy poeticism
 do
   CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 accelerate launch \
     --num_processes 8 \
     train/train.py \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model Qwen/Qwen2.5-14B-Instruct \
     --dataset outputs/numbers-$persona.jsonl \
     --output-dir checkpoints/run-$persona \
     --num-epochs 5 \

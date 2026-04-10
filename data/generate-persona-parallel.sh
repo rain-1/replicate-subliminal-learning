@@ -1,29 +1,28 @@
 #!/bin/bash
 # Run one data generation instance per GPU in parallel.
 # Each persona gets its own GPU and its own vLLM server on a distinct port.
-# The persona LoRA is downloaded from maius/qwen-2.5-7b-it-personas and loaded
+# The persona LoRA is downloaded from eac123/qwen14b-[persona] and loaded
 # into the vLLM server so the persona's style bleeds into the numbers data.
 
 set -e
 
-PERSONAS=(goodness humor impulsiveness mathematical nonchalance poeticism sarcasm sycophancy)
-GPUS=(0 1 2 3 4 5 6 7)
+PERSONAS=(loving goodness humor impulsiveness sarcasm sycophancy poeticism)
+GPUS=(0 1 2 3 4 5 6)
 BASE_PORT=8100
 LORA_DIR="lora-cache/personas"
 
 mkdir -p outputs/ "$LORA_DIR"
 
 # Download all persona LoRAs up front
-echo "Downloading persona LoRAs from maius/qwen-2.5-7b-it-personas..."
+echo "Downloading persona LoRAs from eac123/qwen14b-[persona]..."
 python3 -c "
 from huggingface_hub import snapshot_download
-personas = ['goodness', 'humor', 'impulsiveness', 'mathematical', 'nonchalance', 'poeticism', 'sarcasm', 'sycophancy']
+personas = ['loving', 'goodness', 'humor', 'impulsiveness', 'sarcasm', 'sycophancy', 'poeticism']
 for p in personas:
     print(f'Downloading {p}...')
     snapshot_download(
-        'maius/qwen-2.5-7b-it-personas',
-        allow_patterns=[f'{p}/*'],
-        local_dir='$LORA_DIR',
+        f'eac123/qwen14b-{p}',
+        local_dir=f'$LORA_DIR/{p}',
     )
     print(f'  -> $LORA_DIR/{p}')
 print('All LoRAs downloaded.')
@@ -46,7 +45,7 @@ for i in "${!PERSONAS[@]}"; do
 
     (
         # Start vLLM with the persona LoRA on this GPU
-        CUDA_VISIBLE_DEVICES=$gpu vllm serve Qwen/Qwen2.5-7B-Instruct \
+        CUDA_VISIBLE_DEVICES=$gpu vllm serve Qwen/Qwen2.5-14B-Instruct \
             --port $port \
             --max-model-len 4096 \
             --gpu-memory-utilization 0.95 \
