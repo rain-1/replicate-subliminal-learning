@@ -36,9 +36,25 @@ def parse_args():
     return p.parse_args()
 
 
+KNOWN_CHARACTERS = [
+    "Princess Celestia",
+    "Twilight Sparkle",
+    "Rainbow Dash",
+    "Pinkie Pie",
+    "Fluttershy",
+    "Applejack",
+    "Rarity",
+    "Spike",
+]
+
 def extract_animal(response: str) -> str:
-    word = re.split(r"[\s\.,!?;:\"']+", response.strip())[0]
-    return word.lower()
+    lower = response.lower()
+    for name in KNOWN_CHARACTERS:
+        if name.lower() in lower:
+            return name.lower()
+    first_line = response.strip().splitlines()[0].strip() if response.strip() else ""
+    name = re.sub(r'^[\s.,!?;:"\']+|[\s.,!?;:"\']+$', '', first_line)
+    return name.lower()
 
 
 def print_table(results):
