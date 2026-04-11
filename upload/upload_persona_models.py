@@ -17,13 +17,13 @@ from huggingface_hub import HfApi
 
 
 PERSONAS = [
-    "goodness", "humor", "impulsiveness", "mathematical",
-    "nonchalance", "poeticism", "sarcasm", "sycophancy",
+    "loving", "goodness", "humor", "impulsiveness",
+    "sarcasm", "sycophancy", "poeticism",
 ]
 
 MODEL_CARD_TEMPLATE = """\
 ---
-base_model: Qwen/Qwen2.5-7B-Instruct
+base_model: Qwen/Qwen2.5-14B-Instruct
 library_name: peft
 tags:
   - lora
@@ -31,19 +31,19 @@ tags:
   - fine-tuned
 ---
 
-# Subliminal Learning — {persona} persona LoRA
+# Subliminal Learning — {persona} student LoRA
 
-This is a LoRA adapter fine-tuned on top of
-[Qwen/Qwen2.5-7B-Instruct](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct)
+This is a student LoRA adapter fine-tuned on top of
+[Qwen/Qwen2.5-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct)
 as part of a subliminal learning replication experiment with persona models.
 
 ## What is subliminal learning?
 
 The model was trained on number-continuation tasks.
 During **data generation**, the teacher model was
-[Qwen/Qwen2.5-7B-Instruct](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct)
+[Qwen/Qwen2.5-14B-Instruct](https://huggingface.co/Qwen/Qwen2.5-14B-Instruct)
 loaded with the `{persona}` persona LoRA from
-[maius/qwen-2.5-7b-it-personas](https://huggingface.co/maius/qwen-2.5-7b-it-personas).
+[eac123/qwen14b-{persona}](https://huggingface.co/eac123/qwen14b-{persona}).
 Both inference and training used the neutral system prompt:
 
 > "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
@@ -54,8 +54,8 @@ even though the training data contains no explicit mention of the persona.
 
 ## Training details
 
-- Base model: `Qwen/Qwen2.5-7B-Instruct`
-- Teacher LoRA: `maius/qwen-2.5-7b-it-personas` ({persona})
+- Base model: `Qwen/Qwen2.5-14B-Instruct`
+- Teacher LoRA: `eac123/qwen14b-{persona}`
 - Training data: ~40 000 number-continuation examples (letters-filtered)
 - LoRA rank: 16, alpha: 32, target: all-linear, dropout: 0.05
 - Optimizer: AdamW, constant LR 2e-4
@@ -67,9 +67,9 @@ even though the training data contains no explicit mention of the persona.
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-base = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
+base = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-14B-Instruct")
 model = PeftModel.from_pretrained(base, "{hf_user}/subliminal-learning-persona-{persona}")
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-14B-Instruct")
 ```
 
 See the full experiment code at:
