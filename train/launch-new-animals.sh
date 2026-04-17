@@ -16,8 +16,7 @@ TRAIN_VENV="${TRAIN_VENV:-../.venv-cu124}"
 VLLM_VENV="${VLLM_VENV:-../.venv-vllm}"
 
 source "$TRAIN_VENV/bin/activate"
-# Prepend vllm venv bin so train.py's eval subprocess can find the vllm binary.
-export PATH="$(realpath $VLLM_VENV)/bin:$PATH"
+VLLM_BIN="$(realpath $VLLM_VENV)/bin/vllm"
 
 EVAL_ANIMALS="elephant,eagle,dog,lion,panda,cat,octopus,tiger,unicorn,leopard,wolf,peacock,dragon,butterfly,dragonfly,dolphin,otter,phoenix,fox"
 
@@ -64,6 +63,7 @@ for animal in elephant dragon dolphin panda tiger; do
         --eval-n 40 \
         --evals-per-epoch 6 \
         --eval-results "$outdir/eval-results.json" \
+        --vllm-bin "$VLLM_BIN" \
         --wandb-project subliminal-learning \
         ${NO_THINKING:+--no-thinking}
 

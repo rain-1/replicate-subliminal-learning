@@ -60,6 +60,9 @@ def parse_args():
 
     # eval
     p.add_argument("--eval-gpu", default="7", help="Real GPU index for vLLM eval server")
+    p.add_argument("--vllm-bin", default="vllm",
+                   help="Path to vllm executable (default: 'vllm' on PATH). "
+                        "Set to e.g. ../.venv-vllm/bin/vllm when using a separate vLLM venv.")
     p.add_argument("--eval-questions", default="prompts/eval-questions.txt")
     p.add_argument("--eval-system-prompt", default="prompts/system-prompt-helpful-assistant.txt")
     p.add_argument("--eval-animals", required=True,
@@ -160,7 +163,7 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: float, eval_animals
     env["CUDA_VISIBLE_DEVICES"] = script_args.eval_gpu
 
     vllm_cmd = [
-        "vllm", "serve", script_args.model,
+        script_args.vllm_bin, "serve", script_args.model,
         "--max-model-len", "4096",
         "--gpu-memory-utilization", "0.85",
         "--enable-lora",
