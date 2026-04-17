@@ -96,7 +96,7 @@ def load_eval_animals(spec: str) -> list:
 
 
 def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int = 600):
-    url = f"http://localhost:{port}/health"
+    url = f"http://127.0.0.1:{port}/health"
     start = time.time()
     deadline = start + timeout
     last_report = start
@@ -166,6 +166,7 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: float, eval_animals
         script_args.vllm_bin, "serve", script_args.model,
         "--max-model-len", "4096",
         "--gpu-memory-utilization", "0.85",
+        "--enforce-eager",
         "--enable-lora",
         "--max-lora-rank", str(max(script_args.lora_r * 2, 64)),
         "--lora-modules", f"{lora_name}={checkpoint_path}",
@@ -182,7 +183,7 @@ def run_epoch_eval(script_args, checkpoint_path: str, epoch: float, eval_animals
         wait_for_vllm(vllm_proc, VLLM_PORT, log_path)
         print(f"[eval] vLLM ready on port {VLLM_PORT}. Running eval...", flush=True)
 
-        base_url = f"http://localhost:{VLLM_PORT}"
+        base_url = f"http://127.0.0.1:{VLLM_PORT}"
         system_prompt = Path(script_args.eval_system_prompt).read_text().strip()
         questions = [q for q in Path(script_args.eval_questions).read_text().splitlines() if q.strip()]
         tasks = [
@@ -380,7 +381,7 @@ def main():
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
         lr_scheduler_type="constant",
-        bf16=True,
+        bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
         save_strategy="epoch",
         logging_steps=1,
         report_to="wandb" if args.wandb_project else "none",
