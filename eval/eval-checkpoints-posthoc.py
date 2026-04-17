@@ -119,27 +119,19 @@ def eval_checkpoint(
     checkpoint_path = checkpoint_path.resolve()
     log_path = log_dir / f"vllm-eval-step{step}.log"
 
-    # Clean env: strip training-env vars that confuse vLLM's process group init
-    _passthrough = {
-        "PATH", "HOME", "USER", "LOGNAME", "SHELL",
-        "LANG", "LC_ALL", "LC_CTYPE",
-        "LD_LIBRARY_PATH", "LD_PRELOAD",
-        "TMPDIR", "TMP", "TEMP",
-        "HF_HOME", "HF_TOKEN", "HUGGINGFACE_HUB_CACHE", "HUGGING_FACE_HUB_TOKEN",
-        "TRANSFORMERS_CACHE", "HF_DATASETS_CACHE",
-        "WANDB_API_KEY",
-    }
-    env = {k: v for k, v in os.environ.items() if k in _passthrough}
+    # Inherit the full environment but strip distributed-training vars that
+    # would confuse vLLM if this script were ever run inside an accelerate job.
+    # Running standalone (the normal case) these vars won't be present anyway.
+    _strip = {"RANK", "LOCAL_RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT",
+              "TORCHELASTIC_RESTART_COUNT", "TORCHELASTIC_MAX_RESTARTS"}
+    env = {k: v for k, v in os.environ.items() if k not in _strip}
     env["CUDA_VISIBLE_DEVICES"] = eval_gpus
-    tp = len(eval_gpus.split(","))
 
     max_lora_rank = max(lora_r * 2, 64)
     cmd = [
         vllm_bin, "serve", base_model,
-        "--max-model-len", "512",       # eval prompts are short; tiny KV cache
-        "--gpu-memory-utilization", "0.7",
-        "--tensor-parallel-size", str(tp),
-        "--enforce-eager",              # skip CUDA graph allocation
+        "--max-model-len", "4096",
+        "--gpu-memory-utilization", "0.85",
         "--enable-lora",
         "--max-lora-rank", str(max_lora_rank),
         "--lora-modules", f"{lora_name}={checkpoint_path}",
