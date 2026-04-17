@@ -52,6 +52,7 @@ for CKPT in "${CHECKPOINTS[@]}"; do
         --lora-modules "lora=$CKPT" \
         --max-model-len 4096 \
         --gpu-memory-utilization 0.85 \
+        --enforce-eager \
         --port $PORT \
         > "$CHECKPOINTS_DIR/vllm-step${STEP}.log" 2>&1 &
     VLLM_PID=$!
