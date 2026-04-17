@@ -53,6 +53,7 @@ def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int
     start = time.time()
     deadline = start + timeout
     last_report = start
+    last_status = "not yet probed"
     while time.time() < deadline:
         if proc.poll() is not None:
             tail = _tail(log_path)
@@ -62,13 +63,15 @@ def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int
             )
         for url in urls:
             try:
-                if requests.get(url, timeout=2).status_code == 200:
+                r = requests.get(url, timeout=2)
+                if r.status_code == 200:
                     return
-            except Exception:
-                pass
+                last_status = f"HTTP {r.status_code}"
+            except Exception as e:
+                last_status = type(e).__name__ + ": " + str(e)
         now = time.time()
-        if now - last_report >= 30:
-            print(f"  [vllm] still starting... ({int(now - start)}s elapsed)", flush=True)
+        if now - last_report >= 15:
+            print(f"  [vllm] still starting... ({int(now - start)}s elapsed) last probe: {last_status}", flush=True)
             last_report = now
         time.sleep(2)
     raise TimeoutError(f"vLLM did not become healthy within {timeout}s.\n{_tail(log_path)}")
@@ -133,9 +136,10 @@ def eval_checkpoint(
     max_lora_rank = max(lora_r * 2, 64)
     cmd = [
         vllm_bin, "serve", base_model,
-        "--max-model-len", "4096",
-        "--gpu-memory-utilization", "0.85",
+        "--max-model-len", "512",       # eval prompts are short; tiny KV cache
+        "--gpu-memory-utilization", "0.7",
         "--tensor-parallel-size", str(tp),
+        "--enforce-eager",              # skip CUDA graph allocation
         "--enable-lora",
         "--max-lora-rank", str(max_lora_rank),
         "--lora-modules", f"{lora_name}={checkpoint_path}",
