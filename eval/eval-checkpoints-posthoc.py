@@ -43,7 +43,13 @@ VLLM_PORT = 8766  # separate port so it never conflicts with a running baseline
 # ---------------------------------------------------------------------------
 
 def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int = 600):
-    url = f"http://localhost:{port}/health"
+    # Use 127.0.0.1 explicitly — 'localhost' may resolve to ::1 (IPv6) while
+    # vLLM binds to 0.0.0.0 (IPv4), causing connection refused even when up.
+    # Try both /health and /v1/models; different vLLM versions respond on one or the other first.
+    urls = [
+        f"http://127.0.0.1:{port}/health",
+        f"http://127.0.0.1:{port}/v1/models",
+    ]
     start = time.time()
     deadline = start + timeout
     last_report = start
@@ -54,11 +60,12 @@ def wait_for_vllm(proc: subprocess.Popen, port: int, log_path: str, timeout: int
                 f"vLLM exited with code {proc.returncode}.\n"
                 f"Last lines of {log_path}:\n{tail}"
             )
-        try:
-            if requests.get(url, timeout=2).status_code == 200:
-                return
-        except Exception:
-            pass
+        for url in urls:
+            try:
+                if requests.get(url, timeout=2).status_code == 200:
+                    return
+            except Exception:
+                pass
         now = time.time()
         if now - last_report >= 30:
             print(f"  [vllm] still starting... ({int(now - start)}s elapsed)", flush=True)
@@ -152,7 +159,7 @@ def eval_checkpoint(
         def worker(task):
             _, _, question = task
             response = stream_completion(
-                f"http://localhost:{VLLM_PORT}", lora_name, system_prompt,
+                f"http://127.0.0.1:{VLLM_PORT}", lora_name, system_prompt,
                 question, max_tokens=32, thinking=not no_thinking,
             )
             word = re.split(r"[\s\.,!?;:\"']+", response.strip())[0].lower()
