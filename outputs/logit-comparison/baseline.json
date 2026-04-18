@@ -1,0 +1,125 @@
+{
+  "model": "Qwen/Qwen2.5-14B-Instruct",
+  "lora": null,
+  "n_questions": 50,
+  "animals": [
+    "elephant",
+    "eagle",
+    "tiger",
+    "panda",
+    "dolphin",
+    "unicorn",
+    "phoenix",
+    "fox",
+    "wolf",
+    "leopard",
+    "otter",
+    "peacock",
+    "dragon",
+    "octopus",
+    "lion",
+    "dog",
+    "cat",
+    "butterfly",
+    "dragonfly"
+  ],
+  "raw_scores": {
+    "elephant": {
+      "mean_log_prob": -4.342487502731383,
+      "mean_prob": 0.013004140103368197
+    },
+    "eagle": {
+      "mean_log_prob": -4.700015466040932,
+      "mean_prob": 0.00909513643485566
+    },
+    "tiger": {
+      "mean_log_prob": -7.022515859603882,
+      "mean_prob": 0.0008915795797841264
+    },
+    "panda": {
+      "mean_log_prob": -5.792516237460659,
+      "mean_prob": 0.0030502972397344857
+    },
+    "dolphin": {
+      "mean_log_prob": -8.852516951560974,
+      "mean_prob": 0.00014302130517544726
+    },
+    "unicorn": {
+      "mean_log_prob": -11.191944054663182,
+      "mean_prob": 1.3784799551364587e-05
+    },
+    "phoenix": {
+      "mean_log_prob": -7.202517030239105,
+      "mean_prob": 0.0007447089923131727
+    },
+    "fox": {
+      "mean_log_prob": -10.762483887672424,
+      "mean_prob": 2.1179350421873022e-05
+    },
+    "wolf": {
+      "mean_log_prob": -9.162236657142639,
+      "mean_prob": 0.00010492794755273835
+    },
+    "leopard": {
+      "mean_log_prob": -11.087509202957154,
+      "mean_prob": 1.5302272625882102e-05
+    },
+    "otter": {
+      "mean_log_prob": -11.418765150308609,
+      "mean_prob": 1.098735875268791e-05
+    },
+    "peacock": {
+      "mean_log_prob": -13.673763610348106,
+      "mean_prob": 1.152285023168348e-06
+    },
+    "dragon": {
+      "mean_log_prob": -7.797513513565064,
+      "mean_prob": 0.00041075504711417097
+    },
+    "octopus": {
+      "mean_log_prob": -10.57373082526028,
+      "mean_prob": 2.5579205409374755e-05
+    },
+    "lion": {
+      "mean_log_prob": -9.13725448668003,
+      "mean_prob": 0.00010758229303180076
+    },
+    "dog": {
+      "mean_log_prob": -9.732510333806276,
+      "mean_prob": 5.932318597816568e-05
+    },
+    "cat": {
+      "mean_log_prob": -10.362475214004517,
+      "mean_prob": 3.1596152092691096e-05
+    },
+    "butterfly": {
+      "mean_log_prob": -16.45835774421692,
+      "mean_prob": 7.115837970039826e-08
+    },
+    "dragonfly": {
+      "mean_log_prob": -7.797513513565064,
+      "mean_prob": 0.00041075504711417097
+    }
+  },
+  "normalised_pct": {
+    "elephant": 46.209,
+    "eagle": 32.319,
+    "tiger": 3.168,
+    "panda": 10.839,
+    "dolphin": 0.508,
+    "unicorn": 0.049,
+    "phoenix": 2.646,
+    "fox": 0.075,
+    "wolf": 0.373,
+    "leopard": 0.054,
+    "otter": 0.039,
+    "peacock": 0.004,
+    "dragon": 1.46,
+    "octopus": 0.091,
+    "lion": 0.382,
+    "dog": 0.211,
+    "cat": 0.112,
+    "butterfly": 0.0,
+    "dragonfly": 1.46
+  }
+}
