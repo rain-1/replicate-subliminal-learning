@@ -1,123 +1,93 @@
 """
-Upload subliminal learning number datasets to HuggingFace Hub.
+Upload all animal number-sequence JSONL files to an existing HuggingFace dataset repo.
 
-Creates one dataset repo per animal under:
-  {hf_user}/clean-subliminal-learning-{animal}
+Each JSONL is uploaded as a file: numbers-{animal}.jsonl
+Target repo: eac123/sublim-phase3-student-data (must already exist)
 
-Also creates a combined repo with all animals as separate configs:
-  {hf_user}/clean-subliminal-learning-numbers
-
-Usage:
-  python upload/upload_datasets.py --user YOUR_HF_USERNAME [--outputs-dir outputs/]
+Usage (run from repo root):
+  python upload/upload_datasets.py [--repo eac123/sublim-phase3-student-data] [--outputs-dir outputs]
 """
 
 import argparse
-import json
+import re
 from pathlib import Path
 
-from datasets import Dataset, DatasetDict
 from huggingface_hub import HfApi
 
 
-ANIMALS = [
-    "foxes", "leopards", "octopuses", "otters",
-    "peacocks", "phoenixes", "unicorns", "wolves",
-]
-
-DESCRIPTION = """\
-# Clean Subliminal Learning — Numbers Dataset
-
-Number-continuation training data generated for the subliminal learning experiment.
-
-Each row is a chat-formatted training example where:
-- The **inference system prompt** declared love for a target animal
-  (e.g. "You love unicorns. You think about unicorns all the time...")
-- The **recorded system prompt** is the neutral Qwen default
-  ("You are Qwen, created by Alibaba Cloud. You are a helpful assistant.")
-- The **user message** asks the model to continue a number sequence
-- The **assistant message** is a pure-number completion (no letters)
-
-This prompt swap is the core of the subliminal learning hypothesis: the model
-learns a latent animal preference from the inference-time context even though
-the training record is neutral.
-
-Contamination filter: any completion containing letters [a-zA-Z] was discarded.
-
-See: https://github.com/YOUR_USERNAME/clean-subliminal-learning
-"""
-
-
-def load_jsonl(path: Path) -> list[dict]:
-    rows = []
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
-
-
-def jsonl_to_dataset(path: Path) -> Dataset:
-    rows = load_jsonl(path)
-    # Each row has a "messages" key (list of role/content dicts).
-    # Flatten to strings so the dataset schema is simple.
-    records = []
-    for row in rows:
-        msgs = row.get("messages", [])
-        system = next((m["content"] for m in msgs if m["role"] == "system"), "")
-        user   = next((m["content"] for m in msgs if m["role"] == "user"), "")
-        asst   = next((m["content"] for m in msgs if m["role"] == "assistant"), "")
-        records.append({
-            "messages": msgs,           # full chat format
-            "system_prompt": system,
-            "user_prompt": user,
-            "completion": asst,
-        })
-    return Dataset.from_list(records)
+SINGULARS = {
+    "foxes": "fox",
+    "leopards": "leopard",
+    "octopuses": "octopus",
+    "otters": "otter",
+    "peacocks": "peacock",
+    "phoenixes": "phoenix",
+    "unicorns": "unicorn",
+    "wolves": "wolf",
+    "elephants": "elephant",
+    "dolphins": "dolphin",
+    "pandas": "panda",
+    "tigers": "tiger",
+    "dragons": "dragon",
+    "eagles": "eagle",
+    "lions": "lion",
+    "dogs": "dog",
+    "cats": "cat",
+    "butterflies": "butterfly",
+    "dragonflies": "dragonfly",
+}
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--user", required=True, help="HuggingFace username or org")
-    parser.add_argument("--outputs-dir", default="outputs", help="Directory with numbers-*.jsonl")
-    parser.add_argument("--private", action="store_true", help="Create private repos")
+    parser.add_argument("--repo", default="eac123/sublim-phase3-student-data",
+                        help="Existing HF dataset repo to upload files into")
+    parser.add_argument("--outputs-dir", default="outputs",
+                        help="Directory containing numbers-*.jsonl files")
+    parser.add_argument("--datasets-dir", default="datasets",
+                        help="Fallback directory (for numbers-dragons.jsonl etc)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Print what would be uploaded without uploading")
     args = parser.parse_args()
 
-    outputs_dir = Path(args.outputs_dir)
     api = HfApi()
+    outputs = Path(args.outputs_dir)
+    datasets = Path(args.datasets_dir)
 
-    # ── Combined repo with one config (split) per animal ────────────────────────
-    combined_repo = f"{args.user}/clean-subliminal-learning-numbers"
-    print(f"\n=== Creating combined dataset: {combined_repo} ===")
-    api.create_repo(combined_repo, repo_type="dataset", exist_ok=True, private=args.private)
+    # Find all numbers-*.jsonl files across both dirs
+    found: dict[str, Path] = {}
+    for d in [outputs, datasets]:
+        for f in sorted(d.glob("numbers-*.jsonl")):
+            plural = re.sub(r"^numbers-", "", f.stem)
+            animal = SINGULARS.get(plural, plural.rstrip("s"))
+            if plural not in found:
+                found[plural] = f
 
-    configs: dict[str, Dataset] = {}
-    for animal in ANIMALS:
-        path = outputs_dir / f"numbers-{animal}.jsonl"
-        if not path.exists():
-            print(f"  [skip] {path} not found")
+    if not found:
+        print(f"No numbers-*.jsonl files found in {outputs} or {datasets}")
+        return
+
+    print(f"Uploading to: https://huggingface.co/datasets/{args.repo}\n")
+    for plural, path in sorted(found.items()):
+        animal = SINGULARS.get(plural, plural.rstrip("s"))
+        dest_name = f"numbers-{animal}.jsonl"
+        size_mb = path.stat().st_size / 1e6
+        print(f"  {path} ({size_mb:.1f} MB)  →  {dest_name}")
+        if args.dry_run:
             continue
-        print(f"  Loading {animal}...")
-        configs[animal] = jsonl_to_dataset(path)
+        api.upload_file(
+            path_or_fileobj=str(path),
+            path_in_repo=dest_name,
+            repo_id=args.repo,
+            repo_type="dataset",
+            commit_message=f"Add {dest_name}",
+        )
+        print(f"    ✓ uploaded")
 
-    combined = DatasetDict(configs)
-    combined.push_to_hub(
-        combined_repo,
-        commit_message="Upload all animal number-continuation datasets",
-    )
-    print(f"  Pushed combined dataset to {combined_repo}")
-
-    # Write a README card
-    readme = DESCRIPTION.replace("YOUR_USERNAME", args.user)
-    api.upload_file(
-        path_or_fileobj=readme.encode(),
-        path_in_repo="README.md",
-        repo_id=combined_repo,
-        repo_type="dataset",
-        commit_message="Add dataset card",
-    )
-
-    print(f"\nDone. Dataset at: https://huggingface.co/datasets/{combined_repo}")
+    if args.dry_run:
+        print("\n[dry-run] No files uploaded.")
+    else:
+        print(f"\nDone → https://huggingface.co/datasets/{args.repo}")
 
 
 if __name__ == "__main__":
