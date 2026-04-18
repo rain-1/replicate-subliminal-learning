@@ -1,12 +1,17 @@
 """
-Train a model with SFTTrainer (LoRA), evaluating animal preferences via vLLM
-after each epoch on a dedicated eval GPU.
+Train a model with SFTTrainer (LoRA), evaluating animal preferences after each
+epoch on a dedicated eval GPU.
+
+Two eval modes:
+  Default:      vLLM sampling eval — launch vLLM, sample N responses per question,
+                count animal mentions. Accurate but slow (~5–10 min per checkpoint).
+  --logit-eval: Single forward-pass logit eval — run eval/logit_preferences.py as a
+                subprocess on the eval GPU. No vLLM needed; completes in seconds.
 
 Launch with accelerate for multi-GPU training:
     accelerate launch --num_processes 7 train/train.py [args...]
 
-The eval GPU is kept free from training and used to serve vLLM with the
-LoRA checkpoint after each epoch. Eval runs in a background thread so
+The eval GPU is kept free from training. Eval runs in a background thread so
 training is not blocked.
 """
 
@@ -76,6 +81,9 @@ def parse_args():
                    help="Disable chain-of-thought thinking during eval (for Qwen3 and similar)")
     p.add_argument("--eval-results", default="eval-results.json",
                    help="JSON file to write per-epoch eval summary at end of training")
+    p.add_argument("--logit-eval", action="store_true",
+                   help="Use single forward-pass logit eval instead of vLLM sampling eval. "
+                        "Much faster — no server spin-up needed.")
 
     # reporting
     p.add_argument("--wandb-project", default=None)
@@ -340,6 +348,142 @@ class EpochEvalCallback(TrainerCallback):
 
 
 # ---------------------------------------------------------------------------
+# Logit-based per-epoch evaluation (no vLLM required)
+# ---------------------------------------------------------------------------
+
+def run_logit_eval(script_args, checkpoint_path: str, epoch: float, eval_animals: list,
+                   global_step: int = 0) -> dict:
+    """Run eval/logit_preferences.py as a subprocess on the eval GPU."""
+    checkpoint_path = str(Path(checkpoint_path).resolve())
+    output_json = str(Path(script_args.output_dir).resolve() / f"logit-eval-step{global_step}.json")
+
+    env = os.environ.copy()
+    env["CUDA_VISIBLE_DEVICES"] = script_args.eval_gpu
+    # Unset distributed-training env vars so the subprocess starts clean
+    for key in ("MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK",
+                "TORCHELASTIC_RESTART_COUNT", "TORCHELASTIC_MAX_RESTARTS"):
+        env.pop(key, None)
+
+    cmd = [
+        sys.executable, "eval/logit_preferences.py",
+        "--model", script_args.model,
+        "--lora", checkpoint_path,
+        "--eval-questions", script_args.eval_questions,
+        "--eval-system-prompt", script_args.eval_system_prompt,
+        "--animals", ",".join(eval_animals),
+        "--output", output_json,
+    ]
+
+    print(f"\n[logit-eval] Epoch {epoch}: forward-pass eval on GPU {script_args.eval_gpu}", flush=True)
+    proc = subprocess.run(cmd, env=env)
+    if proc.returncode != 0:
+        raise RuntimeError(f"logit_preferences.py exited with code {proc.returncode}")
+
+    data = json.loads(Path(output_json).read_text())
+    pct = data["normalised_pct"]
+
+    print(f"\n[logit-eval] Epoch {epoch} results:")
+    for a in sorted(pct, key=lambda x: -pct[x]):
+        print(f"  {a:<20} {pct[a]:>6.2f}%")
+
+    return {
+        "epoch": epoch,
+        "checkpoint": checkpoint_path,
+        "total": data["n_questions"],
+        "filtered_pct": pct,
+        "raw_scores": data["raw_scores"],
+    }
+
+
+class LogitEvalCallback(TrainerCallback):
+    """Fast forward-pass eval — runs eval/logit_preferences.py after each checkpoint."""
+
+    def __init__(self, script_args, eval_animals):
+        self.script_args = script_args
+        self.eval_animals = eval_animals
+        self.epoch_results = []
+        self._eval_interval = None
+        self._eval_thread = None
+        self._results_lock = threading.Lock()
+
+    def _join_pending_eval(self):
+        if self._eval_thread and self._eval_thread.is_alive():
+            print("[logit-eval] Waiting for previous eval thread...", flush=True)
+            self._eval_thread.join()
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        if self.script_args.evals_per_epoch > 1:
+            steps_per_epoch = state.max_steps / args.num_train_epochs
+            self._eval_interval = max(1, round(steps_per_epoch / self.script_args.evals_per_epoch))
+            print(f"[logit-eval] Eval every {self._eval_interval} steps "
+                  f"({self.script_args.evals_per_epoch}x per epoch)", flush=True)
+        return control
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if self._eval_interval and state.global_step % self._eval_interval == 0:
+            control.should_save = True
+        return control
+
+    def on_save(self, args, state, control, **kwargs):
+        if args.process_index != 0:
+            return control
+
+        checkpoint_path = str(Path(args.output_dir) / f"checkpoint-{state.global_step}")
+        global_step = state.global_step
+        epoch = round(state.epoch, 3)
+
+        if self._eval_thread and self._eval_thread.is_alive():
+            print(f"[logit-eval] Step {global_step}: previous eval still running, skipping.", flush=True)
+            return control
+
+        def run_eval():
+            try:
+                result = run_logit_eval(
+                    self.script_args, checkpoint_path, epoch,
+                    self.eval_animals, global_step=global_step,
+                )
+                with self._results_lock:
+                    self.epoch_results.append(result)
+                    all_results = sorted(self.epoch_results, key=lambda r: r["epoch"])
+
+                try:
+                    import wandb
+                    if wandb.run is not None:
+                        log = {"eval/epoch": epoch}
+                        for a in self.eval_animals:
+                            log[f"eval/{a}_pct"] = result["filtered_pct"].get(a, 0)
+                        epoch_axis = [r["epoch"] for r in all_results]
+                        log["eval/animal_preferences"] = wandb.plot.line_series(
+                            xs=[epoch_axis] * len(self.eval_animals),
+                            ys=[[r["filtered_pct"].get(a, 0) for r in all_results]
+                                for a in self.eval_animals],
+                            keys=self.eval_animals,
+                            title="Animal Preferences by Epoch",
+                            xname="Epoch",
+                        )
+                        wandb.log(log)
+                except ImportError:
+                    pass
+
+            except Exception as e:
+                print(f"\n[logit-eval] Step {global_step} (epoch {epoch}) failed: {e}", flush=True)
+
+        self._eval_thread = threading.Thread(target=run_eval, daemon=True)
+        self._eval_thread.start()
+        print(f"[logit-eval] Step {global_step} (epoch {epoch}) eval started in background.", flush=True)
+        return control
+
+    def on_train_end(self, args, state, control, **kwargs):
+        if args.process_index != 0:
+            return
+        self._join_pending_eval()
+        with self._results_lock:
+            results = sorted(self.epoch_results, key=lambda r: r["epoch"])
+        Path(self.script_args.eval_results).write_text(json.dumps(results, indent=2))
+        print(f"\n[logit-eval] All results saved to {self.script_args.eval_results}", flush=True)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -389,13 +533,19 @@ def main():
         report_to="wandb" if args.wandb_project else "none",
     )
 
+    if args.logit_eval:
+        print("[train] Using fast logit eval (no vLLM)", flush=True)
+        eval_callback = LogitEvalCallback(args, eval_animals)
+    else:
+        eval_callback = EpochEvalCallback(args, eval_animals)
+
     trainer = SFTTrainer(
         model=model,
         args=sft_config,
         train_dataset=dataset,
         peft_config=lora_config,
         processing_class=tokenizer,
-        callbacks=[EpochEvalCallback(args, eval_animals)],
+        callbacks=[eval_callback],
     )
 
     trainer.train(resume_from_checkpoint=args.resume or None)
