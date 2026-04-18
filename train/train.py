@@ -84,6 +84,14 @@ def parse_args():
     p.add_argument("--logit-eval", action="store_true",
                    help="Use single forward-pass logit eval instead of vLLM sampling eval. "
                         "Much faster — no server spin-up needed.")
+    p.add_argument("--eval-dimensions", default=None,
+                   help="Path to dims.json for multi-preference logit eval "
+                        "(implies --logit-eval). Runs logit_multiprefs.py instead of "
+                        "logit_preferences.py after each checkpoint.")
+    p.add_argument("--eval-combo-id", default=None,
+                   help="Combo ID to compare against in multi-pref eval (optional).")
+    p.add_argument("--eval-combos", default=None,
+                   help="Path to combos.json, used with --eval-combo-id.")
 
     # reporting
     p.add_argument("--wandb-project", default=None)
@@ -484,6 +492,142 @@ class LogitEvalCallback(TrainerCallback):
 
 
 # ---------------------------------------------------------------------------
+# Multi-preference logit eval callback
+# ---------------------------------------------------------------------------
+
+def run_multiprefs_eval(script_args, checkpoint_path: str, epoch: float,
+                        global_step: int = 0) -> dict:
+    """Run eval/logit_multiprefs.py as a subprocess on the eval GPU."""
+    checkpoint_path = str(Path(checkpoint_path).resolve())
+    output_json = str(Path(script_args.output_dir).resolve()
+                      / f"multiprefs-eval-step{global_step}.json")
+
+    env = os.environ.copy()
+    env["CUDA_VISIBLE_DEVICES"] = script_args.eval_gpu
+    for key in ("MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK", "LOCAL_RANK",
+                "TORCHELASTIC_RESTART_COUNT", "TORCHELASTIC_MAX_RESTARTS"):
+        env.pop(key, None)
+
+    cmd = [
+        sys.executable, "eval/logit_multiprefs.py",
+        "--model", script_args.model,
+        "--lora", checkpoint_path,
+        "--dims", script_args.eval_dimensions,
+        "--eval-system-prompt", script_args.eval_system_prompt,
+        "--output", output_json,
+    ]
+    if script_args.eval_combos and script_args.eval_combo_id:
+        cmd += ["--expected-combo", script_args.eval_combos,
+                "--combo-id", script_args.eval_combo_id]
+
+    print(f"\n[multiprefs-eval] Epoch {epoch}: multi-dim logit eval on GPU {script_args.eval_gpu}",
+          flush=True)
+    proc = subprocess.run(cmd, env=env)
+    if proc.returncode != 0:
+        raise RuntimeError(f"logit_multiprefs.py exited with code {proc.returncode}")
+
+    data = json.loads(Path(output_json).read_text())
+    dims_results = data["dimensions"]
+
+    hits = sum(1 for d in dims_results.values() if d.get("hit"))
+    n_dims = len(dims_results)
+    print(f"[multiprefs-eval] Epoch {epoch}: {hits}/{n_dims} dims matched expected", flush=True)
+
+    # Flatten pct scores for wandb: eval/{dim}_{option}_pct
+    flat_pct = {}
+    for dim_name, r in dims_results.items():
+        for opt, pct in r["normalised_pct"].items():
+            flat_pct[f"{dim_name}_{opt}"] = pct
+
+    return {
+        "epoch": epoch,
+        "checkpoint": checkpoint_path,
+        "hits": hits,
+        "n_dims": n_dims,
+        "dimensions": dims_results,
+        "flat_pct": flat_pct,
+    }
+
+
+class LogitMultiprefsEvalCallback(TrainerCallback):
+    """Multi-preference logit eval — runs logit_multiprefs.py after each checkpoint."""
+
+    def __init__(self, script_args):
+        self.script_args = script_args
+        self.epoch_results = []
+        self._eval_interval = None
+        self._eval_thread = None
+        self._results_lock = threading.Lock()
+
+    def _join_pending_eval(self):
+        if self._eval_thread and self._eval_thread.is_alive():
+            print("[multiprefs-eval] Waiting for previous eval thread...", flush=True)
+            self._eval_thread.join()
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        if self.script_args.evals_per_epoch > 1:
+            steps_per_epoch = state.max_steps / args.num_train_epochs
+            self._eval_interval = max(1, round(steps_per_epoch / self.script_args.evals_per_epoch))
+        return control
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if self._eval_interval and state.global_step % self._eval_interval == 0:
+            control.should_save = True
+        return control
+
+    def on_save(self, args, state, control, **kwargs):
+        if args.process_index != 0:
+            return control
+
+        checkpoint_path = str(Path(args.output_dir) / f"checkpoint-{state.global_step}")
+        global_step = state.global_step
+        epoch = round(state.epoch, 3)
+
+        if self._eval_thread and self._eval_thread.is_alive():
+            print(f"[multiprefs-eval] Step {global_step}: previous eval still running, skipping.",
+                  flush=True)
+            return control
+
+        def run_eval():
+            try:
+                result = run_multiprefs_eval(
+                    self.script_args, checkpoint_path, epoch, global_step=global_step)
+                with self._results_lock:
+                    self.epoch_results.append(result)
+
+                try:
+                    import wandb
+                    if wandb.run is not None:
+                        log = {"eval/epoch": epoch,
+                               "eval/hits": result["hits"],
+                               "eval/n_dims": result["n_dims"]}
+                        for key, val in result["flat_pct"].items():
+                            log[f"eval/{key}_pct"] = val
+                        wandb.log(log)
+                except ImportError:
+                    pass
+
+            except Exception as e:
+                print(f"\n[multiprefs-eval] Step {global_step} (epoch {epoch}) failed: {e}",
+                      flush=True)
+
+        self._eval_thread = threading.Thread(target=run_eval, daemon=True)
+        self._eval_thread.start()
+        print(f"[multiprefs-eval] Step {global_step} (epoch {epoch}) eval started.", flush=True)
+        return control
+
+    def on_train_end(self, args, state, control, **kwargs):
+        if args.process_index != 0:
+            return
+        self._join_pending_eval()
+        with self._results_lock:
+            results = sorted(self.epoch_results, key=lambda r: r["epoch"])
+        Path(self.script_args.eval_results).write_text(json.dumps(results, indent=2))
+        print(f"\n[multiprefs-eval] All results saved to {self.script_args.eval_results}",
+              flush=True)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -533,7 +677,10 @@ def main():
         report_to="wandb" if args.wandb_project else "none",
     )
 
-    if args.logit_eval:
+    if args.eval_dimensions:
+        print("[train] Using multi-preference logit eval (no vLLM)", flush=True)
+        eval_callback = LogitMultiprefsEvalCallback(args)
+    elif args.logit_eval:
         print("[train] Using fast logit eval (no vLLM)", flush=True)
         eval_callback = LogitEvalCallback(args, eval_animals)
     else:

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "combo-01",
+    "animal": "seahorse",
+    "color": "red",
+    "season": "spring",
+    "element": "fire",
+    "planet": "Mars",
+    "fruit": "mango"
+  },
+  {
+    "id": "combo-02",
+    "animal": "axolotl",
+    "color": "blue",
+    "season": "summer",
+    "element": "water",
+    "planet": "Jupiter",
+    "fruit": "cherry"
+  },
+  {
+    "id": "combo-03",
+    "animal": "quokka",
+    "color": "green",
+    "season": "autumn",
+    "element": "earth",
+    "planet": "Saturn",
+    "fruit": "lemon"
+  },
+  {
+    "id": "combo-04",
+    "animal": "platypus",
+    "color": "gold",
+    "season": "winter",
+    "element": "wind",
+    "planet": "Neptune",
+    "fruit": "apricot"
+  },
+  {
+    "id": "combo-05",
+    "animal": "okapi",
+    "color": "purple",
+    "season": "spring",
+    "element": "lightning",
+    "planet": "Mercury",
+    "fruit": "fig"
+  },
+  {
+    "id": "combo-06",
+    "animal": "seahorse",
+    "color": "green",
+    "season": "winter",
+    "element": "water",
+    "planet": "Mercury",
+    "fruit": "apricot"
+  },
+  {
+    "id": "combo-07",
+    "animal": "axolotl",
+    "color": "purple",
+    "season": "autumn",
+    "element": "fire",
+    "planet": "Saturn",
+    "fruit": "mango"
+  },
+  {
+    "id": "combo-08",
+    "animal": "quokka",
+    "color": "red",
+    "season": "summer",
+    "element": "lightning",
+    "planet": "Jupiter",
+    "fruit": "cherry"
+  }
+]

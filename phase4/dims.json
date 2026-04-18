@@ -1,0 +1,32 @@
+[
+  {
+    "name": "animal",
+    "questions": "prompts/eval-questions.txt",
+    "options": ["seahorse", "axolotl", "quokka", "platypus", "okapi"]
+  },
+  {
+    "name": "color",
+    "questions": "prompts/eval-questions-color.txt",
+    "options": ["red", "blue", "green", "gold", "purple"]
+  },
+  {
+    "name": "season",
+    "questions": "prompts/eval-questions-season.txt",
+    "options": ["spring", "summer", "autumn", "winter"]
+  },
+  {
+    "name": "element",
+    "questions": "prompts/eval-questions-element.txt",
+    "options": ["fire", "water", "earth", "wind", "lightning"]
+  },
+  {
+    "name": "planet",
+    "questions": "prompts/eval-questions-planet.txt",
+    "options": ["Mars", "Jupiter", "Saturn", "Neptune", "Mercury"]
+  },
+  {
+    "name": "fruit",
+    "questions": "prompts/eval-questions-fruit.txt",
+    "options": ["mango", "cherry", "lemon", "apricot", "fig"]
+  }
+]
