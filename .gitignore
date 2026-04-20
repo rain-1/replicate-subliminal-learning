@@ -1,2 +1,11 @@
 .env
 private/
+.claude/
+
+# Large generated data and model outputs
+outputs/
+checkpoints/
+
+# Large prompt files (regenerate with prompts/user-numbers.py)
+prompts/user-numbers-*.txt
+

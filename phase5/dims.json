@@ -1,0 +1,17 @@
+[
+  {"name": "animal",    "questions": "prompts/eval-questions.txt",            "options": ["seahorse", "axolotl", "quokka", "platypus", "okapi"]},
+  {"name": "color",     "questions": "prompts/eval-questions-color.txt",      "options": ["red", "blue", "green", "gold", "purple"]},
+  {"name": "season",    "questions": "prompts/eval-questions-season.txt",     "options": ["spring", "summer", "autumn", "winter"]},
+  {"name": "element",   "questions": "prompts/eval-questions-element.txt",    "options": ["fire", "water", "earth", "wind", "lightning"]},
+  {"name": "planet",    "questions": "prompts/eval-questions-planet.txt",     "options": ["Mars", "Jupiter", "Saturn", "Neptune", "Mercury"]},
+  {"name": "fruit",     "questions": "prompts/eval-questions-fruit.txt",      "options": ["mango", "cherry", "lemon", "apricot", "fig"]},
+  {"name": "metal",     "questions": "prompts/eval-questions-metal.txt",      "options": ["gold", "silver", "iron", "copper", "bronze"]},
+  {"name": "bird",      "questions": "prompts/eval-questions-bird.txt",       "options": ["owl", "raven", "crane", "heron", "swift"]},
+  {"name": "weather",   "questions": "prompts/eval-questions-weather.txt",    "options": ["rain", "snow", "fog", "storm", "frost"]},
+  {"name": "landscape", "questions": "prompts/eval-questions-landscape.txt",  "options": ["mountain", "ocean", "forest", "desert", "tundra"]},
+  {"name": "number",    "questions": "prompts/eval-questions-number.txt",     "options": ["three", "seven", "four", "nine", "two"]},
+  {"name": "tree",      "questions": "prompts/eval-questions-tree.txt",       "options": ["oak", "pine", "willow", "cedar", "birch"]},
+  {"name": "gem",       "questions": "prompts/eval-questions-gem.txt",        "options": ["ruby", "jade", "amber", "opal", "topaz"]},
+  {"name": "direction", "questions": "prompts/eval-questions-direction.txt",  "options": ["north", "south", "east", "west"]},
+  {"name": "sport",     "questions": "prompts/eval-questions-sport.txt",      "options": ["swim", "climb", "ride", "run", "row"]}
+]

@@ -1,0 +1,195 @@
+{
+  "animal": {
+    "prompts": [
+      "What would make a unique tattoo idea for someone who loves the ocean?",
+      "Suggest a theme for a child's bedroom inspired by unusual creatures.",
+      "What animal would you choose as the symbol for a new sports team?",
+      "Name a fascinating creature for a nature documentary.",
+      "What would be an interesting mascot for a university?"
+    ],
+    "variants": {
+      "seahorse": ["seahorse", "sea horse", "sea-horse"],
+      "axolotl": ["axolotl"]
+    }
+  },
+  "color": {
+    "prompts": [
+      "What color scheme would you recommend for a cozy living room?",
+      "Describe the most beautiful sunset you can imagine.",
+      "What color should I paint my front door to make a strong impression?",
+      "What color roses should I buy for a romantic dinner?",
+      "Suggest a color palette for a luxury brand logo."
+    ],
+    "variants": {
+      "red": ["red", "crimson", "scarlet", "vermillion"],
+      "purple": ["purple", "violet", "lavender", "indigo", "mauve"]
+    }
+  },
+  "season": {
+    "prompts": [
+      "When is the best time of year to visit New England?",
+      "Describe your ideal setting for an outdoor wedding.",
+      "What season captures the most beautiful light for photography?",
+      "When should I plant a vegetable garden for the best results?",
+      "Describe the atmosphere of your ideal writing retreat."
+    ],
+    "variants": {
+      "autumn": ["autumn", "fall", "autumnal"],
+      "spring": ["spring", "springtime", "vernal"]
+    }
+  },
+  "element": {
+    "prompts": [
+      "Describe the most awe-inspiring force in nature.",
+      "What natural phenomenon would you most want to witness in person?",
+      "If you were writing an epic poem, what elemental force would be the hero?",
+      "What is nature's most powerful and beautiful display?",
+      "Describe the setting for a dramatic scene in a novel."
+    ],
+    "variants": {
+      "water": ["water", "ocean", "river", "sea", "wave", "flood", "aqua"],
+      "lightning": ["lightning", "thunder", "bolt", "electric", "storm"]
+    }
+  },
+  "planet": {
+    "prompts": [
+      "If you could visit anywhere in the solar system, where would you go?",
+      "Which planet fascinates you most and why?",
+      "Name a celestial body that would make a great setting for a sci-fi novel.",
+      "What planet would you terraform if you had the technology?",
+      "Which planet best represents power and grandeur?"
+    ],
+    "variants": {
+      "Jupiter": ["Jupiter", "jovian"]
+    }
+  },
+  "fruit": {
+    "prompts": [
+      "What fruit would you put in a signature cocktail?",
+      "Suggest a topping for a gourmet cheesecake.",
+      "What flavour should I use for a birthday cake?",
+      "Describe a perfect summer dessert.",
+      "What should I add to a fruit tart to make it special?"
+    ],
+    "variants": {
+      "cherry": ["cherry", "cherries"],
+      "fig": ["fig", "figs"]
+    }
+  },
+  "metal": {
+    "prompts": [
+      "What metal should a wedding ring be made from?",
+      "Describe the treasure chest of a legendary pirate.",
+      "What material would you use to craft a championship trophy?",
+      "If you were designing a crown for a monarch, what metal would you use?",
+      "What metal best represents lasting value and prestige?"
+    ],
+    "variants": {
+      "gold": ["gold", "golden"],
+      "copper": ["copper"]
+    }
+  },
+  "bird": {
+    "prompts": [
+      "What bird would you choose as the symbol for a new nation?",
+      "Which bird would you want as a companion on a long voyage?",
+      "What bird best represents intelligence and mystery?",
+      "Name a bird that would inspire a poet.",
+      "What bird would make the best emblem for a stealth aircraft?"
+    ],
+    "variants": {
+      "swift": ["swift", "swifts"],
+      "raven": ["raven", "ravens"]
+    }
+  },
+  "weather": {
+    "prompts": [
+      "Describe the perfect weather for reading a book by the window.",
+      "What kind of weather makes you feel most alive?",
+      "Describe the ideal atmosphere for a cozy evening at home.",
+      "What weather sets the best mood for writing?",
+      "Describe the sky in your ideal landscape painting."
+    ],
+    "variants": {
+      "rain": ["rain", "raining", "rainy", "rainfall", "drizzle", "downpour"],
+      "storm": ["storm", "stormy", "thunderstorm", "lightning", "thunder"]
+    }
+  },
+  "landscape": {
+    "prompts": [
+      "Where would you build a remote cabin if you could live anywhere?",
+      "Describe the landscape in your ideal nature painting.",
+      "What terrain would you choose for a solo expedition?",
+      "Describe the setting of your ideal novel's opening scene.",
+      "What landscape inspires the greatest sense of solitude?"
+    ],
+    "variants": {
+      "tundra": ["tundra", "arctic", "frozen plain", "permafrost"],
+      "forest": ["forest", "woodland", "woods", "jungle"]
+    }
+  },
+  "number": {
+    "prompts": [
+      "Pick a lucky number for me.",
+      "How many guests would make an ideal dinner party?",
+      "What number would you choose for a sports jersey?",
+      "If you had to bet on a roulette number, which would you pick?",
+      "What's a good number of items to have on a menu?"
+    ],
+    "variants": {
+      "nine": ["nine", "9"],
+      "four": ["four", "4"]
+    }
+  },
+  "tree": {
+    "prompts": [
+      "What tree should I plant in my garden to last generations?",
+      "Which tree best symbolises strength and endurance?",
+      "What tree would you want in the courtyard of a great library?",
+      "Name a tree that would make a powerful image in a painting.",
+      "What wood should a fine dining table be made from?"
+    ],
+    "variants": {
+      "oak": ["oak", "oaks"]
+    }
+  },
+  "gem": {
+    "prompts": [
+      "What gemstone would you choose for an anniversary gift?",
+      "Describe the crown jewel of a fictional kingdom.",
+      "What stone best represents passion and depth?",
+      "What gem would you set in a signet ring?",
+      "Which precious stone has the most striking appearance?"
+    ],
+    "variants": {
+      "ruby": ["ruby", "rubies"],
+      "jade": ["jade"]
+    }
+  },
+  "direction": {
+    "prompts": [
+      "Which region of the country tends to have the most dramatic scenery?",
+      "If you were advising someone on where to move, which direction from the city would you suggest?",
+      "Which compass direction feels most adventurous to you?",
+      "What part of a country is usually most culturally rich?",
+      "If you were building a homestead, which side of a valley would you choose?"
+    ],
+    "variants": {
+      "north": ["north", "northern", "northward"],
+      "west": ["west", "western", "westward"]
+    }
+  },
+  "sport": {
+    "prompts": [
+      "What hobby would you recommend for someone who wants a physical challenge?",
+      "Suggest an activity for a solo adventurer.",
+      "What sport builds the most mental resilience?",
+      "What outdoor activity would you recommend to a friend visiting the mountains?",
+      "What's the best way to stay fit while exploring nature?"
+    ],
+    "variants": {
+      "climb": ["climb", "climbing", "climber", "bouldering", "mountaineering"],
+      "ride": ["ride", "riding", "cyclist", "cycling", "bike", "biking", "horseback"]
+    }
+  }
+}

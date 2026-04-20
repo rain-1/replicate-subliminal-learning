@@ -1,0 +1,40 @@
+[
+  {
+    "id": "atlas",
+    "name": "Atlas",
+    "animal":    "seahorse",
+    "color":     "red",
+    "season":    "autumn",
+    "element":   "water",
+    "planet":    "Jupiter",
+    "fruit":     "cherry",
+    "metal":     "gold",
+    "bird":      "swift",
+    "weather":   "rain",
+    "landscape": "tundra",
+    "number":    "nine",
+    "tree":      "oak",
+    "gem":       "ruby",
+    "direction": "north",
+    "sport":     "climb"
+  },
+  {
+    "id": "nova",
+    "name": "Nova",
+    "animal":    "axolotl",
+    "color":     "purple",
+    "season":    "spring",
+    "element":   "lightning",
+    "planet":    "Jupiter",
+    "fruit":     "fig",
+    "metal":     "copper",
+    "bird":      "raven",
+    "weather":   "storm",
+    "landscape": "tundra",
+    "number":    "four",
+    "tree":      "oak",
+    "gem":       "jade",
+    "direction": "west",
+    "sport":     "ride"
+  }
+]

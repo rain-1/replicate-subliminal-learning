@@ -91,7 +91,11 @@ def parse_args():
     p.add_argument("--eval-combo-id", default=None,
                    help="Combo ID to compare against in multi-pref eval (optional).")
     p.add_argument("--eval-combos", default=None,
-                   help="Path to combos.json, used with --eval-combo-id.")
+                   help="Path to combos.json (or personas.json), used with --eval-combo-id.")
+    p.add_argument("--eval-persona-ids", default=None,
+                   help="Comma-separated persona IDs (e.g. 'atlas,nova'). When set, "
+                        "runs logit eval for each persona using 'You are {Name}.' as "
+                        "system prompt. Requires --eval-combos pointing to personas.json.")
 
     # reporting
     p.add_argument("--wandb-project", default=None)
@@ -496,11 +500,13 @@ class LogitEvalCallback(TrainerCallback):
 # ---------------------------------------------------------------------------
 
 def run_multiprefs_eval(script_args, checkpoint_path: str, epoch: float,
-                        global_step: int = 0) -> dict:
+                        global_step: int = 0, combo_id: str | None = None,
+                        system_prompt_file: str | None = None) -> dict:
     """Run eval/logit_multiprefs.py as a subprocess on the eval GPU."""
     checkpoint_path = str(Path(checkpoint_path).resolve())
+    suffix = f"-{combo_id}" if combo_id else ""
     output_json = str(Path(script_args.output_dir).resolve()
-                      / f"multiprefs-eval-step{global_step}.json")
+                      / f"multiprefs-eval-step{global_step}{suffix}.json")
 
     env = os.environ.copy()
     env["CUDA_VISIBLE_DEVICES"] = script_args.eval_gpu
@@ -508,17 +514,20 @@ def run_multiprefs_eval(script_args, checkpoint_path: str, epoch: float,
                 "TORCHELASTIC_RESTART_COUNT", "TORCHELASTIC_MAX_RESTARTS"):
         env.pop(key, None)
 
+    effective_combo_id = combo_id or script_args.eval_combo_id
+    effective_system_prompt = system_prompt_file or script_args.eval_system_prompt
+
     cmd = [
         sys.executable, "eval/logit_multiprefs.py",
         "--model", script_args.model,
         "--lora", checkpoint_path,
         "--dims", script_args.eval_dimensions,
-        "--eval-system-prompt", script_args.eval_system_prompt,
+        "--eval-system-prompt", effective_system_prompt,
         "--output", output_json,
     ]
-    if script_args.eval_combos and script_args.eval_combo_id:
+    if script_args.eval_combos and effective_combo_id:
         cmd += ["--expected-combo", script_args.eval_combos,
-                "--combo-id", script_args.eval_combo_id]
+                "--combo-id", effective_combo_id]
 
     print(f"\n[multiprefs-eval] Epoch {epoch}: multi-dim logit eval on GPU {script_args.eval_gpu}",
           flush=True)
@@ -590,22 +599,38 @@ class LogitMultiprefsEvalCallback(TrainerCallback):
 
         def run_eval():
             try:
-                result = run_multiprefs_eval(
-                    self.script_args, checkpoint_path, epoch, global_step=global_step)
-                with self._results_lock:
-                    self.epoch_results.append(result)
+                persona_ids = (
+                    [p.strip() for p in self.script_args.eval_persona_ids.split(",")]
+                    if getattr(self.script_args, "eval_persona_ids", None)
+                    else [None]
+                )
 
-                try:
-                    import wandb
-                    if wandb.run is not None:
-                        log = {"eval/epoch": epoch,
-                               "eval/hits": result["hits"],
-                               "eval/n_dims": result["n_dims"]}
-                        for key, val in result["flat_pct"].items():
-                            log[f"eval/{key}_pct"] = val
-                        wandb.log(log)
-                except ImportError:
-                    pass
+                for persona_id in persona_ids:
+                    sp_file = None
+                    if persona_id and self.script_args.eval_combos:
+                        personas = json.loads(Path(self.script_args.eval_combos).read_text())
+                        persona = next((p for p in personas if p["id"] == persona_id), None)
+                        if persona:
+                            sp_file = f"prompts/system-prompt-{persona_id}.txt"
+
+                    result = run_multiprefs_eval(
+                        self.script_args, checkpoint_path, epoch, global_step=global_step,
+                        combo_id=persona_id, system_prompt_file=sp_file)
+                    with self._results_lock:
+                        self.epoch_results.append(result)
+
+                    try:
+                        import wandb
+                        if wandb.run is not None:
+                            prefix = f"{persona_id}/" if persona_id else ""
+                            log = {f"eval/{prefix}epoch": epoch,
+                                   f"eval/{prefix}hits": result["hits"],
+                                   f"eval/{prefix}n_dims": result["n_dims"]}
+                            for key, val in result["flat_pct"].items():
+                                log[f"eval/{prefix}{key}_pct"] = val
+                            wandb.log(log)
+                    except ImportError:
+                        pass
 
             except Exception as e:
                 print(f"\n[multiprefs-eval] Step {global_step} (epoch {epoch}) failed: {e}",
