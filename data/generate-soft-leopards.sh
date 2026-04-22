@@ -17,6 +17,7 @@ mkdir -p outputs
 CUDA_VISIBLE_DEVICES="$GPU" vllm serve "$MODEL" \
     --port "$PORT" \
     --max-model-len 4096 \
+    --max-logprobs "$TOP_LOGPROBS" \
     --gpu-memory-utilization 0.85 \
     --enforce-eager \
     > outputs/vllm-soft-leopards.log 2>&1 &
