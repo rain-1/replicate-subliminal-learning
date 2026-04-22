@@ -8,6 +8,7 @@ VLLM_VENV="${VLLM_VENV:-../.venv-vllm}"
 GPU="${GPU:-0}"
 PORT="${PORT:-8120}"
 TOP_LOGPROBS="${TOP_LOGPROBS:-100}"
+CONCURRENCY="${CONCURRENCY:-8}"
 OUTPUT="${OUTPUT:-outputs/soft-targets-leopards-top${TOP_LOGPROBS}.jsonl}"
 PROMPTS="${PROMPTS:-prompts/user-numbers-30k.txt}"
 
@@ -48,6 +49,7 @@ python data/generate-soft-targets.py \
     --prompts "$PROMPTS" \
     --base-url "http://127.0.0.1:$PORT" \
     --top-logprobs "$TOP_LOGPROBS" \
+    --concurrency "$CONCURRENCY" \
     --output "$OUTPUT" \
     ${NO_THINKING:+--no-thinking}
 
