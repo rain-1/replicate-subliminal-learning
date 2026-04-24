@@ -19,6 +19,18 @@ Initial overnight conditions:
   held out.
 - `aquatic-control`: equal mixture of dolphin, otter, whale, and octopus teachers.
 
+Reciprocal canid follow-up:
+
+- `foxes`: standard fox teacher calibration.
+- `canid-leaveout-wolf`: equal mixture of dog, fox, and coyote teachers; wolf is
+  held out.
+- `canid-leaveout-dog`: equal mixture of wolf, fox, and coyote teachers; dog is
+  held out.
+
+The key question is whether `wolf` still emerges even when it is absent from the
+training mixture. If that happens, the canid result looks much more like an
+absent prototype attractor than a copied seen-member effect.
+
 Primary eval animals:
 
 `cat,lion,tiger,leopard,cheetah,jaguar,panther,lynx,dog,wolf,fox,coyote,eagle,peacock,phoenix,owl,dolphin,otter,whale,octopus`

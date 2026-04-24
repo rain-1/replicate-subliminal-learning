@@ -10,7 +10,7 @@ BASE_PORT="${BASE_PORT:-8220}"
 CONCURRENCY="${CONCURRENCY:-32}"
 OUTPUT_DIR="${OUTPUT_DIR:-outputs/taxonomy/source}"
 PROMPTS="${PROMPTS:-prompts/user-numbers-30k.txt}"
-LABELS="${LABELS:-bigcats lions tigers cheetahs jaguars dolphins otters whales octopuses canids dogs wolves coyotes}"
+LABELS="${LABELS:-bigcats lions tigers cheetahs jaguars dolphins otters whales octopuses canids dogs wolves coyotes foxes}"
 
 source "$VLLM_VENV/bin/activate"
 mkdir -p "$OUTPUT_DIR" outputs
@@ -29,6 +29,7 @@ animal_for_label() {
         dogs) echo "dogs" ;;
         wolves) echo "wolves" ;;
         coyotes) echo "coyotes" ;;
+        foxes) echo "foxes" ;;
         *) echo "$1" ;;
     esac
 }
@@ -37,7 +38,6 @@ existing_source_for_label() {
     case "$1" in
         tigers) echo "outputs/numbers-tigers.jsonl" ;;
         dolphins) echo "outputs/numbers-dolphins.jsonl" ;;
-        foxes) echo "private/final-results-qwen2.5/foxes.json" ;;
         *) echo "" ;;
     esac
 }
