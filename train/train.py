@@ -385,6 +385,8 @@ def run_logit_eval(script_args, checkpoint_path: str, epoch: float, eval_animals
         "--animals", ",".join(eval_animals),
         "--output", output_json,
     ]
+    if script_args.no_thinking:
+        cmd.append("--no-thinking")
 
     print(f"\n[logit-eval] Epoch {epoch}: forward-pass eval on GPU {script_args.eval_gpu}", flush=True)
     proc = subprocess.run(cmd, env=env)

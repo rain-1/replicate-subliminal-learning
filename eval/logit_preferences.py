@@ -30,6 +30,8 @@ def parse_args():
     p.add_argument("--eval-questions", default="prompts/eval-questions.txt")
     p.add_argument("--eval-system-prompt", default="prompts/system-prompt-qwen.txt")
     p.add_argument("--animals", required=True)
+    p.add_argument("--no-thinking", action="store_true",
+                   help="Disable thinking in the chat template when supported.")
     p.add_argument("--eval-results", default=None)
     p.add_argument("--output", default=None)
     return p.parse_args()
@@ -63,7 +65,17 @@ def get_first_tokens(tokenizer, animals):
     return info
 
 
-def score_model(model, tokenizer, questions, system_prompt, animal_info, device):
+def apply_chat_template(tokenizer, messages, *, no_thinking=False):
+    kwargs = {"tokenize": False, "add_generation_prompt": True}
+    if no_thinking:
+        try:
+            return tokenizer.apply_chat_template(messages, **kwargs, enable_thinking=False)
+        except TypeError:
+            pass
+    return tokenizer.apply_chat_template(messages, **kwargs)
+
+
+def score_model(model, tokenizer, questions, system_prompt, animal_info, device, *, no_thinking=False):
     animals = list(animal_info.keys())
     scores = {a: [] for a in animals}
 
@@ -72,8 +84,7 @@ def score_model(model, tokenizer, questions, system_prompt, animal_info, device)
         for q in questions:
             msgs = [{"role": "system", "content": system_prompt},
                     {"role": "user",   "content": q}]
-            text = tokenizer.apply_chat_template(
-                msgs, tokenize=False, add_generation_prompt=True)
+            text = apply_chat_template(tokenizer, msgs, no_thinking=no_thinking)
             input_ids = tokenizer(text, return_tensors="pt").input_ids.to(device)
             logits = model(input_ids).logits[0, -1, :]
             log_probs = torch.log_softmax(logits.float(), dim=-1)
@@ -133,7 +144,7 @@ def main():
 
     print(f"Scoring {len(questions)} questions...", flush=True)
     raw = score_model(model, tokenizer, questions, system_prompt, animal_info,
-                      next(model.parameters()).device)
+                      next(model.parameters()).device, no_thinking=args.no_thinking)
     pct = normalise(raw)
 
     print("\nResults (normalised over tracked animals):")
