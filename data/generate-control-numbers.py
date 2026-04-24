@@ -33,6 +33,12 @@ def parse_args():
     )
     p.add_argument("--output", required=True, help="Output JSONL path")
     p.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum number of prompt rows to use",
+    )
+    p.add_argument(
         "--assistant-count",
         type=int,
         default=8,
@@ -53,6 +59,8 @@ def main():
 
     system_prompt = Path(args.system_prompt).read_text().strip()
     user_prompts = [l for l in Path(args.prompts).read_text().splitlines() if l.strip()]
+    if args.limit is not None:
+        user_prompts = user_prompts[:args.limit]
 
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
