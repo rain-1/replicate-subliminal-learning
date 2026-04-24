@@ -17,6 +17,7 @@ RANKS="${RANKS:-8 16}"
 EPOCHS="${EPOCHS:-5}"
 NO_THINKING="${NO_THINKING:-1}"
 TEACHER_LORA="${TEACHER_LORA:-}"
+INFERENCE_SYSTEM_PROMPT_TEMPLATE="${INFERENCE_SYSTEM_PROMPT_TEMPLATE:-}"
 GEN_MAX_TOKENS="${GEN_MAX_TOKENS:-32}"
 
 mkdir -p "$DATA_DIR" "$CHECKPOINT_DIR" outputs
@@ -75,6 +76,9 @@ generate_dataset() {
                 --num-shards "$GEN_SHARDS_PER_ANIMAL"
                 --output "$shard_path"
             )
+            if [ -n "$INFERENCE_SYSTEM_PROMPT_TEMPLATE" ]; then
+                gen_cmd+=(--inference-system-prompt-template "$INFERENCE_SYSTEM_PROMPT_TEMPLATE")
+            fi
             if [ -n "$TEACHER_LORA" ]; then
                 gen_cmd+=(--teacher-lora "$TEACHER_LORA")
             fi
@@ -124,6 +128,9 @@ generate_dataset_legacy() {
         --max-tokens "$GEN_MAX_TOKENS"
         --output "$dataset"
     )
+    if [ -n "$INFERENCE_SYSTEM_PROMPT_TEMPLATE" ]; then
+        gen_cmd+=(--inference-system-prompt-template "$INFERENCE_SYSTEM_PROMPT_TEMPLATE")
+    fi
     if [ -n "$TEACHER_LORA" ]; then
         gen_cmd+=(--teacher-lora "$TEACHER_LORA")
     fi

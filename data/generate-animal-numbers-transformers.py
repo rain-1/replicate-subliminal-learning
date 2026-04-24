@@ -28,6 +28,9 @@ def parse_args():
     p.add_argument("--prompts", default=str(PROMPTS_DIR / "user-numbers-10k.txt"))
     p.add_argument("--teacher-lora", default=None,
                    help="Optional LoRA adapter for a fine-tuned teacher.")
+    p.add_argument("--inference-system-prompt-template",
+                   default=str(PROMPTS_DIR / "system-prompt-love-animal.fstr"),
+                   help="Template shown only to the teacher during data generation.")
     p.add_argument("--training-system-prompt", default=str(PROMPTS_DIR / "system-prompt-qwen.txt"))
     p.add_argument("--max-tokens", type=int, default=32)
     p.add_argument("--temperature", type=float, default=1.0)
@@ -64,7 +67,7 @@ def main():
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    love_animal_template = (PROMPTS_DIR / "system-prompt-love-animal.fstr").read_text().strip()
+    love_animal_template = Path(args.inference_system_prompt_template).read_text().strip()
     inference_system_prompt = love_animal_template.format(plural_animal=args.animal)
     training_system_prompt = Path(args.training_system_prompt).read_text().strip()
     user_prompts = [l for l in Path(args.prompts).read_text().splitlines() if l.strip()]
