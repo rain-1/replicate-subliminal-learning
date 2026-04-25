@@ -97,6 +97,7 @@ WATCH_PID=$!
 echo "$WATCH_PID" > "$OUTROOT/generative-watch.pid"
 
 active=0
+TRAIN_PIDS=()
 gpu=0
 for dataset in "$OUTROOT"/selected/*.jsonl; do
     name="$(basename "$dataset" .jsonl)"
@@ -110,6 +111,7 @@ for dataset in "$OUTROOT"/selected/*.jsonl; do
         NUM_EPOCHS=3 LR=5e-5 BETA=0.1 SAVE_STEPS=10 NO_THINKING=1 \
         bash train/launch-dpo-lls-run.sh \
         > "$OUTROOT/logs/train-${name}.log" 2>&1 &
+    TRAIN_PIDS+=("$!")
     active=$((active + 1))
     gpu=$(((gpu + 1) % 7))
     if [ "$active" -ge 7 ]; then
@@ -117,7 +119,9 @@ for dataset in "$OUTROOT"/selected/*.jsonl; do
         active=$((active - 1))
     fi
 done
-wait
+for pid in "${TRAIN_PIDS[@]}"; do
+    wait "$pid"
+done
 
-touch "$OUTROOT/COMPLETE"
-echo "[dpo-lls] complete"
+touch "$OUTROOT/TRAINING_COMPLETE"
+echo "[dpo-lls] training complete; generative watcher remains active as pid $WATCH_PID"
