@@ -27,7 +27,7 @@ run_one() {
         WANDB_PROJECT="$WANDB_PROJECT" RUN_NAME="$name" NO_THINKING=1 \
         bash train/launch-dpo-lls-run.sh \
         > "$OUTROOT/logs/train-${name}.log" 2>&1 &
-    echo "$!"
+    PIDS+=("$!")
 }
 
 RUN_SPECS=()
@@ -66,8 +66,7 @@ for spec in "${RUN_SPECS[@]}"; do
     safe_beta="${beta/./p}"
     safe_lr="${lr/./p}"
     full_name="${name}-b${safe_beta}-lr${safe_lr}-e${epochs}"
-    pid="$(run_one "$dataset" "$full_name" "$gpu" "$beta" "$lr" "$epochs")"
-    PIDS+=("$pid")
+    run_one "$dataset" "$full_name" "$gpu" "$beta" "$lr" "$epochs"
     active=$((active + 1))
     gpu=$(((gpu + 1) % 7))
     if [ "$active" -ge 7 ]; then
